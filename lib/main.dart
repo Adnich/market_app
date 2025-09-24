@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; 
 import 'src/router/app_router.dart';
-
+import 'src/router/auth_notifier.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const AppEntry());
@@ -15,7 +15,7 @@ class AppEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     return FutureBuilder(
       future: Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform, // 👈 OVDJE DODAJ
+        options: DefaultFirebaseOptions.currentPlatform, 
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
@@ -37,7 +37,7 @@ class AppEntry extends StatelessWidget {
             ),
           );
         }
-
+        
         return const MaterialApp(
           home: Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -45,5 +45,7 @@ class AppEntry extends StatelessWidget {
         );
       },
     );
+
+    
   }
 }
