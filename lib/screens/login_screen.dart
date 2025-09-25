@@ -95,6 +95,14 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: () => context.go('/register'),
               child: const Text('Nemaš račun? Registruj se'),
             ),
+            ElevatedButton(
+            onPressed: () {
+              context.go('/home');
+            },
+            child: const Text('Posjeti bez prijave'),
+          ),
+
+
           ],
         ),
       ),

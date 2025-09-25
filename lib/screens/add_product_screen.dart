@@ -74,7 +74,6 @@ class _AddOrEditProductScreenState extends State<AddOrEditProductScreen> {
         final imageUrl = await _uploadImage(docRef.id);
         await docRef.update({'imageUrl': imageUrl});
       } else {
-        // Ažuriranje
         final imageUrl = await _uploadImage(widget.productId!);
         data['imageUrl'] = _imageUrl ?? '';
         await FirebaseFirestore.instance

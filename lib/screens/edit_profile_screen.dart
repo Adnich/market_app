@@ -1,9 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -15,17 +12,15 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _dobController = TextEditingController();
-  String? _gender;
-  String? _email;
-  String? _photoUrl;
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _dateOfBirthController = TextEditingController();
 
-  File? _newImage;
+  String? _selectedGender;
+  bool _isLoading = false;
 
-  bool _loading = true;
+  final String uid = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void initState() {
@@ -34,131 +29,132 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _loadUserData() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    final data = doc.data();
-
-    if (data != null) {
-      setState(() {
-        _firstNameController.text = data['firstName'] ?? '';
-        _lastNameController.text = data['lastName'] ?? '';
-        _phoneController.text = data['phone'] ?? '';
-        _dobController.text = data['dateOfBirth'] ?? '';
-        _gender = data['gender'];
-        _email = data['email'];
-        _photoUrl = data['photoUrl'];
-        _loading = false;
-      });
+    try {
+      final doc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          _firstNameController.text = data['firstName'] ?? '';
+          _lastNameController.text = data['lastName'] ?? '';
+          _phoneController.text = data['phone'] ?? '';
+          _dateOfBirthController.text = data['dateOfBirth'] ?? '';
+          _selectedGender = data['gender'] ?? null;
+        });
+      }
+    } catch (e) {
+      print("Greška pri učitavanju podataka: $e");
     }
   }
 
-  Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        _newImage = File(picked.path);
-      });
-    }
-  }
-
-  Future<void> _saveProfile() async {
+  Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    setState(() => _isLoading = true);
 
-    String? photoUrl = _photoUrl;
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'firstName': _firstNameController.text.trim(),
+        'lastName': _lastNameController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'dateOfBirth': _dateOfBirthController.text.trim(),
+        'gender': _selectedGender ?? '',
+      });
 
-    if (_newImage != null) {
-      final ref = FirebaseStorage.instance.ref().child('profile_images').child('$uid.jpg');
-      await ref.putFile(_newImage!);
-      photoUrl = await ref.getDownloadURL();
-    }
-
-    await FirebaseFirestore.instance.collection('users').doc(uid).update({
-      'firstName': _firstNameController.text.trim(),
-      'lastName': _lastNameController.text.trim(),
-      'phone': _phoneController.text.trim(),
-      'dateOfBirth': _dobController.text.trim(),
-      'gender': _gender,
-      'photoUrl': photoUrl,
-    });
-
-    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil je uspješno ažuriran.')),
+        const SnackBar(content: Text("Profil uspješno ažuriran")),
       );
+
+      if (mounted) Navigator.pop(context); 
+    } catch (e) {
+      print("Greška pri spremanju: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Greška pri spremanju podataka")),
+      );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _phoneController.dispose();
+    _dateOfBirthController.dispose();
+    super.dispose();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Uredi profil')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              GestureDetector(
-                onTap: _pickImage,
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundImage: _newImage != null
-                      ? FileImage(_newImage!)
-                      : (_photoUrl != null ? NetworkImage(_photoUrl!) : null) as ImageProvider?,
-                  child: _newImage == null && _photoUrl == null
-                      ? const Icon(Icons.camera_alt, size: 40)
-                      : null,
+      appBar: AppBar(title: const Text("Uredi profil")),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
+                key: _formKey,
+                child: ListView(
+                  children: [
+                    TextFormField(
+                      controller: _firstNameController,
+                      decoration: const InputDecoration(labelText: 'Ime'),
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Unesite ime' : null,
+                    ),
+                    TextFormField(
+                      controller: _lastNameController,
+                      decoration: const InputDecoration(labelText: 'Prezime'),
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Unesite prezime'
+                          : null,
+                    ),
+                    TextFormField(
+                      controller: _phoneController,
+                      decoration:
+                          const InputDecoration(labelText: 'Broj telefona'),
+                      keyboardType: TextInputType.phone,
+                    ),
+                    TextFormField(
+                      controller: _dateOfBirthController,
+                      decoration:
+                          const InputDecoration(labelText: 'Datum rođenja'),
+                      keyboardType: TextInputType.datetime,
+                    ),
+                    DropdownButtonFormField<String>(
+                      initialValue: (_selectedGender == 'muško' ||
+                      _selectedGender == 'žensko' ||
+                      _selectedGender == 'drugo')
+                    ? _selectedGender
+                    : null,
+                      decoration: const InputDecoration(labelText: 'Spol'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'muško',
+                          child: Text('Muško'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'žensko',
+                          child: Text('Žensko'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'drugo',
+                          child: Text('Drugo'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() => _selectedGender = value);
+                      },
+                    ),
+                    const SizedBox(height: 30),
+                    ElevatedButton(
+                      onPressed: _saveChanges,
+                      child: const Text("Spremi promjene"),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _firstNameController,
-                decoration: const InputDecoration(labelText: 'Ime'),
-                validator: (value) => value!.isEmpty ? 'Unesite ime' : null,
-              ),
-              TextFormField(
-                controller: _lastNameController,
-                decoration: const InputDecoration(labelText: 'Prezime'),
-                validator: (value) => value!.isEmpty ? 'Unesite prezime' : null,
-              ),
-              TextFormField(
-                controller: _dobController,
-                decoration: const InputDecoration(labelText: 'Datum rođenja'),
-              ),
-              DropdownButtonFormField<String>(
-                value: _gender,
-                items: ['muško', 'žensko'].map((g) {
-                  return DropdownMenuItem(value: g, child: Text(g));
-                }).toList(),
-                onChanged: (value) => setState(() => _gender = value),
-                decoration: const InputDecoration(labelText: 'Spol'),
-              ),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Broj telefona'),
-              ),
-              TextFormField(
-                enabled: false,
-                decoration: InputDecoration(
-                  labelText: 'Email (nepromjenjiv)',
-                  hintText: _email,
-                ),
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _saveProfile,
-                child: const Text('Sačuvaj promjene'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

@@ -1,9 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,10 +14,15 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String? name;
+  String? firstName;
+  String? lastName;
   String? email;
+  String? phone;
+  String? dateOfBirth;
+  String? gender;
   String? imageUrl;
-  final uid = FirebaseAuth.instance.currentUser!.uid;
+
+  final String uid = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void initState() {
@@ -26,15 +32,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserData() async {
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    if (doc.exists) {
-      setState(() {
-
-
-        
-        name = doc['name'];
-        email = doc['email'];
-      });
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          firstName = data['firstName'];
+          lastName = data['lastName'];
+          email = data['email'];
+          phone = data['phone'];
+          dateOfBirth = data['dateOfBirth'];
+          gender = data['gender'];
+          imageUrl = data['photoUrl']; 
+        });
+      }
+    } catch (e) {
+      print("Greška pri učitavanju korisničkih podataka: $e");
     }
   }
 
@@ -47,7 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         imageUrl = url;
       });
     } catch (e) {
-      print('Nema slike još.');
+      print('Nema slike u Storage-u ili nije učitana.');
     }
   }
 
@@ -57,11 +70,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (picked != null) {
       final file = File(picked.path);
 
-      await FirebaseStorage.instance
-          .ref('profile_pictures/$uid.jpg')
-          .putFile(file);
+      try {
+       
+        await FirebaseStorage.instance
+            .ref('profile_pictures/$uid.jpg')
+            .putFile(file);
 
-      _loadProfileImage();
+        final downloadUrl = await FirebaseStorage.instance
+            .ref('profile_pictures/$uid.jpg')
+            .getDownloadURL();
+
+       
+        await FirebaseFirestore.instance.collection('users').doc(uid).update({
+          'photoUrl': downloadUrl,
+        });
+
+        setState(() {
+          imageUrl = downloadUrl;
+        });
+      } catch (e) {
+        print("Greška prilikom uploada slike: $e");
+      }
+    }
+  }
+
+  void _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (mounted) {
+      Navigator.of(context).pushReplacementNamed('/login'); 
     }
   }
 
@@ -69,36 +105,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Profil")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             GestureDetector(
               onTap: _pickAndUploadImage,
               child: CircleAvatar(
-                radius: 50,
+                radius: 60,
                 backgroundImage:
                     imageUrl != null ? NetworkImage(imageUrl!) : null,
                 child: imageUrl == null
-                    ? const Icon(Icons.person, size: 50)
+                    ? const Icon(Icons.person, size: 60)
                     : null,
-
-              
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 24),
+
+            _buildProfileRow("Ime", firstName),
+            _buildProfileRow("Prezime", lastName),
+            _buildProfileRow("Email", email),
+            _buildProfileRow("Telefon", phone),
+            _buildProfileRow("Datum rođenja", dateOfBirth),
+            _buildProfileRow("Spol", gender),
+
+            const SizedBox(height: 30),
             ElevatedButton.icon(
-              onPressed: () async {
-                await FirebaseAuth.instance.signOut();
-              },
+            onPressed: () {
+              context.push('/edit-profile'); 
+            
+            },
+            icon: const Icon(Icons.edit),
+            label: const Text("Uredi profil"),
+          ),
+
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: _logout,
               icon: const Icon(Icons.logout),
-              label: const Text('Odjavi se'),
+              label: const Text("Odjavi se"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
             ),
-            const SizedBox(height: 20),
-            Text(name ?? 'Ime nije dostupno'),
-            Text(email ?? 'Email nije dostupan'),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfileRow(String label, String? value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("$label: ",
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(child: Text(value ?? "-", softWrap: true)),
+        ],
       ),
     );
   }

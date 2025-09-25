@@ -13,6 +13,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _lastNameController=TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -20,12 +21,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _selectedGender = 'muško';
   
   Future<void> _register() async {
+  final lastName=_lastNameController.text.trim();
   final name = _nameController.text.trim();
   final email = _emailController.text.trim();
   final password = _passwordController.text.trim();
-  
-
-
+  final phone=_phoneController.text.trim();
+  final dateOfBirth=_dobController.text.trim();
+  final gender=_selectedGender;
   try {
     final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
       email: email,
@@ -37,12 +39,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         .doc(credential.user!.uid)
         .set({
       'firstName': name,
-      'lastName': '',
+      'lastName': lastName,
       'email': email,
-      'phone': '',
-      'dateOfBirth': '',
-      'gender': '',
-      'photoUrl': '',
+      'phone': phone,
+      'dateOfBirth': dateOfBirth,
+      'gender': gender,
       'createdAt': Timestamp.now(),
     });
 
@@ -74,9 +75,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             TextField(
               controller: _nameController,
-             decoration: const InputDecoration(labelText: 'Ime i prezime'),
+             decoration: const InputDecoration(labelText: 'Ime'),
             ),
-
+            TextField(
+             controller: _lastNameController,
+             decoration: const InputDecoration(labelText: 'Prezime'),
+            ),
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(labelText: 'Email'),
@@ -97,8 +101,9 @@ TextField(
   decoration: const InputDecoration(labelText: 'Datum rođenja (YYYY-MM-DD)'),
 ),
 
+
 DropdownButtonFormField<String>(
-  value: _selectedGender,
+  initialValue: _selectedGender,
   items: const [
     DropdownMenuItem(value: 'muško', child: Text('Muško')),
     DropdownMenuItem(value: 'žensko', child: Text('Žensko')),
