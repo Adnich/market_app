@@ -32,6 +32,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final doc =
           await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
       if (doc.exists) {
         final data = doc.data()!;
         setState(() {
@@ -39,11 +40,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _lastNameController.text = data['lastName'] ?? '';
           _phoneController.text = data['phone'] ?? '';
           _dateOfBirthController.text = data['dateOfBirth'] ?? '';
-          _selectedGender = data['gender'] ?? null;
+          _selectedGender = data['gender'];
         });
       }
-    } catch (e) {
-      print("Greška pri učitavanju podataka: $e");
+    } on FirebaseException catch (e) {
+      debugPrint('FirebaseException [loadUserData]: ${e.code} - ${e.message}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Greška pri učitavanju podataka. Pokušajte ponovo.'),
+          ),
+        );
+      }
+      rethrow;
+    } catch (e, stackTrace) {
+      debugPrint('Neuhvaćena greška [loadUserData]: $e');
+      debugPrintStack(stackTrace: stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Došlo je do neočekivane greške.')),
+        );
+      }
+      rethrow;
     }
   }
 
@@ -61,18 +79,46 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'gender': _selectedGender ?? '',
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profil uspješno ažuriran")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profil uspješno ažuriran")),
+        );
+        Navigator.pop(context);
+      }
 
-      if (mounted) Navigator.pop(context); 
-    } catch (e) {
-      print("Greška pri spremanju: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Greška pri spremanju podataka")),
-      );
+    } on FirebaseException catch (e) {
+      String message;
+      switch (e.code) {
+        case 'permission-denied':
+          message = 'Nemate dozvolu za izmjenu podataka.';
+          break;
+        case 'unavailable':
+          message = 'Usluga trenutno nije dostupna. Pokušajte kasnije.';
+          break;
+        default:
+          message = 'Greška pri spremanju podataka.';
+      }
+
+      debugPrint('FirebaseException [saveChanges]: ${e.code} - ${e.message}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+      rethrow;
+
+    } catch (e, stackTrace) {
+      debugPrint('Neuhvaćena greška [saveChanges]: $e');
+      debugPrintStack(stackTrace: stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Došlo je do neočekivane greške.')),
+        );
+      }
+      rethrow;
+
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -124,10 +170,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     DropdownButtonFormField<String>(
                       initialValue: (_selectedGender == 'muško' ||
-                      _selectedGender == 'žensko' ||
-                      _selectedGender == 'drugo')
-                    ? _selectedGender
-                    : null,
+                              _selectedGender == 'žensko' ||
+                              _selectedGender == 'drugo')
+                          ? _selectedGender
+                          : null,
                       decoration: const InputDecoration(labelText: 'Spol'),
                       items: const [
                         DropdownMenuItem(

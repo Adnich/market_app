@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'entry_points/flavor_config/flavor_config.dart';
+import 'flavor_config/flavor_config.dart';
 import 'app_router/app_pages.dart';
 
 class App extends StatelessWidget {

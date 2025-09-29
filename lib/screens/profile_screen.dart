@@ -43,11 +43,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
           phone = data['phone'];
           dateOfBirth = data['dateOfBirth'];
           gender = data['gender'];
-          imageUrl = data['photoUrl']; 
+          imageUrl = data['photoUrl'];
         });
       }
-    } catch (e) {
-      print("Greška pri učitavanju korisničkih podataka: $e");
+    } on FirebaseException catch (e) {
+      debugPrint('FirebaseException [loadUserData]: ${e.code} - ${e.message}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Greška pri učitavanju korisničkih podataka. Pokušajte ponovo.'),
+          ),
+        );
+      }
+      rethrow;
+    } catch (e, stackTrace) {
+      debugPrint('Neuhvaćena greška [loadUserData]: $e');
+      debugPrintStack(stackTrace: stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Došlo je do neočekivane greške.')),
+        );
+      }
+      rethrow;
     }
   }
 
@@ -59,19 +76,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         imageUrl = url;
       });
-    } catch (e) {
-      print('Nema slike u Storage-u ili nije učitana.');
+    } on FirebaseException catch (e) {
+      if (e.code != 'object-not-found') {
+        debugPrint('FirebaseException [loadProfileImage]: ${e.code} - ${e.message}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Greška pri učitavanju slike profila.')),
+          );
+        }
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Neuhvaćena greška [loadProfileImage]: $e');
+      debugPrintStack(stackTrace: stackTrace);
     }
   }
 
   Future<void> _pickAndUploadImage() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
+
     if (picked != null) {
       final file = File(picked.path);
 
       try {
-       
         await FirebaseStorage.instance
             .ref('profile_pictures/$uid.jpg')
             .putFile(file);
@@ -80,7 +107,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .ref('profile_pictures/$uid.jpg')
             .getDownloadURL();
 
-       
         await FirebaseFirestore.instance.collection('users').doc(uid).update({
           'photoUrl': downloadUrl,
         });
@@ -88,8 +114,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           imageUrl = downloadUrl;
         });
-      } catch (e) {
-        print("Greška prilikom uploada slike: $e");
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Slika profila je uspješno ažurirana')),
+          );
+        }
+
+      } on FirebaseException catch (e) {
+        debugPrint('FirebaseException [pickAndUploadImage]: ${e.code} - ${e.message}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Greška pri slanju slike. Pokušajte ponovo.')),
+          );
+        }
+        rethrow;
+      } catch (e, stackTrace) {
+        debugPrint('Neuhvaćena greška [pickAndUploadImage]: $e');
+        debugPrintStack(stackTrace: stackTrace);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Došlo je do neočekivane greške.')),
+          );
+        }
+        rethrow;
       }
     }
   }
@@ -97,7 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/login'); 
+      Navigator.of(context).pushReplacementNamed('/login');
     }
   }
 
@@ -131,14 +179,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 30),
             ElevatedButton.icon(
-            onPressed: () {
-              context.push('/edit-profile'); 
-            
-            },
-            icon: const Icon(Icons.edit),
-            label: const Text("Uredi profil"),
-          ),
-
+              onPressed: () {
+                context.push('/edit-profile');
+              },
+              icon: const Icon(Icons.edit),
+              label: const Text("Uredi profil"),
+            ),
             const SizedBox(height: 10),
             ElevatedButton.icon(
               onPressed: _logout,
