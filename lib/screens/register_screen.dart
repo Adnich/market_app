@@ -21,13 +21,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _selectedGender = 'muško';
   
   Future<void> _register() async {
-  final lastName=_lastNameController.text.trim();
+  final lastName = _lastNameController.text.trim();
   final name = _nameController.text.trim();
   final email = _emailController.text.trim();
   final password = _passwordController.text.trim();
-  final phone=_phoneController.text.trim();
-  final dateOfBirth=_dobController.text.trim();
-  final gender=_selectedGender;
+  final phone = _phoneController.text.trim();
+  final dateOfBirth = _dobController.text.trim();
+  final gender = _selectedGender;
+
   try {
     final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
       email: email,
@@ -56,10 +57,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
       context.go('/login');
     }
 
-  } catch (e) {
+  } on FirebaseAuthException catch (e) {
+    String message;
+    switch (e.code) {
+      case 'email-already-in-use':
+        message = 'Ova email adresa je već registrovana.';
+        break;
+      case 'invalid-email':
+        message = 'Unesena email adresa nije ispravna.';
+        break;
+      case 'weak-password':
+        message = 'Lozinka je preslaba. Molimo unesite jaču lozinku.';
+        break;
+      default:
+        message = 'Došlo je do greške prilikom registracije. Pokušajte ponovo.';
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Greška: ${e.toString()}')),
+      SnackBar(content: Text(message)),
     );
+
+    rethrow; 
+
+  } catch (e, stackTrace) {
+    debugPrint('Neuhvaćena greška u registraciji: $e');
+    debugPrintStack(stackTrace: stackTrace);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Došlo je do neočekivane greške. Pokušajte ponovo.')),
+    );
+
+    rethrow; 
   }
 }
 
