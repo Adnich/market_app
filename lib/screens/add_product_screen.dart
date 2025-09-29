@@ -57,42 +57,75 @@ class _AddOrEditProductScreenState extends State<AddOrEditProductScreen> {
   }
 
   Future<void> _saveProduct() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+  if (!_formKey.currentState!.validate()) return;
+  setState(() => _isLoading = true);
 
-    final data = {
-      'name': _nameController.text.trim(),
-      'price': double.tryParse(_priceController.text.trim()) ?? 0,
-      'description': _descriptionController.text.trim(),
-      'createdAt': Timestamp.now(),
-    };
+  final data = {
+    'name': _nameController.text.trim(),
+    'price': double.tryParse(_priceController.text.trim()) ?? 0,
+    'description': _descriptionController.text.trim(),
+    'createdAt': Timestamp.now(),
+  };
 
-    try {
-      if (widget.productId == null) {
-        // Novi proizvod
-        final docRef = await FirebaseFirestore.instance.collection('products').add(data);
-        final imageUrl = await _uploadImage(docRef.id);
-        await docRef.update({'imageUrl': imageUrl});
-      } else {
-        final imageUrl = await _uploadImage(widget.productId!);
-        data['imageUrl'] = _imageUrl ?? '';
-        await FirebaseFirestore.instance
-            .collection('products')
-            .doc(widget.productId!)
-            .update(data);
-      }
-
-      if (mounted) {
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Greška: $e')),
-      );
+  try {
+    if (widget.productId == null) {
+      final docRef = await FirebaseFirestore.instance.collection('products').add(data);
+      final imageUrl = await _uploadImage(docRef.id);
+      await docRef.update({'imageUrl': imageUrl});
+    } else {
+      final imageUrl = await _uploadImage(widget.productId!);
+      data['imageUrl'] = imageUrl ?? _imageUrl ?? '';
+      await FirebaseFirestore.instance
+          .collection('products')
+          .doc(widget.productId!)
+          .update(data);
     }
 
-    setState(() => _isLoading = false);
+    if (mounted) {
+      Navigator.pop(context);
+    }
+
+  } on FirebaseException catch (e) {
+    String message;
+    switch (e.code) {
+      case 'permission-denied':
+        message = 'Nemate dozvolu za ovu akciju.';
+        break;
+      case 'unavailable':
+        message = 'Usluga trenutno nije dostupna. Pokušajte kasnije.';
+        break;
+      case 'unauthenticated':
+        message = 'Morate biti prijavljeni da biste izvršili ovu akciju.';
+        break;
+      default:
+        message = 'Došlo je do greške prilikom spremanja proizvoda.';
+    }
+
+    debugPrint('FirebaseException [saveProduct]: ${e.code} - ${e.message}');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+    rethrow; 
+
+  } catch (e, stackTrace) {
+    debugPrint('Neuhvaćena greška kod spremanja proizvoda: $e');
+    debugPrintStack(stackTrace: stackTrace);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Došlo je do neočekivane greške. Pokušajte ponovo.'),
+        ),
+      );
+    }
+    rethrow;
   }
+
+  setState(() => _isLoading = false);
+}
+
 
   @override
   void dispose() {
