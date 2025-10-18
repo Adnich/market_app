@@ -5,11 +5,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../../firebase_options.dart';
 
+
 @module
 abstract class FirebaseModule {
   @preResolve
-  Future<FirebaseApp> get firebaseApp =>
-      Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  Future<FirebaseApp> get firebaseApp async =>
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   @lazySingleton
   FirebaseAuth get auth => FirebaseAuth.instance;

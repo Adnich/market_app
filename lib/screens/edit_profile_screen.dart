@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
+import 'package:market_app/src/dependencies.dart';
 
 class EditProfileScreen extends HookWidget {
   const EditProfileScreen({super.key});
@@ -18,8 +19,8 @@ class EditProfileScreen extends HookWidget {
 
     final selectedGender = useState<String?>(null);
     final isLoading = useState(false);
-
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final auth = getIt<FirebaseAuth>();
+    final uid = auth.currentUser!.uid;
 
     useEffect(() {
       Future<void> loadUserData() async {

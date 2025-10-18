@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:market_app/src/dependencies.dart';
 import '/screens/login_screen.dart';
 import '/screens/register_screen.dart';
 import '/screens/home_screen.dart';
@@ -11,7 +12,8 @@ import '/src/router/auth_refresh_stream.dart';
 final GoRouter appRouter = GoRouter(
   initialLocation: '/login',
   redirect: (context, state) {
-    final user = FirebaseAuth.instance.currentUser;
+    final auth = getIt<FirebaseAuth>();
+    final user = auth.currentUser;
     final loggingInOrRegistering =
         state.matchedLocation == '/login' || state.matchedLocation == '/register';
     final visitingPublicHome = state.matchedLocation == '/home';
@@ -27,7 +29,7 @@ final GoRouter appRouter = GoRouter(
     return null;
   },
   refreshListenable: AuthRefreshStream(
-    stream: FirebaseAuth.instance.authStateChanges(),
+  stream: getIt<FirebaseAuth>().authStateChanges(),
   ),
   routes: [
     GoRoute(

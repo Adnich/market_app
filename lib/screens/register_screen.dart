@@ -3,6 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:market_app/src/dependencies.dart';
 
 class RegisterScreen extends HookWidget {
   const RegisterScreen({super.key});
@@ -36,8 +37,9 @@ class RegisterScreen extends HookWidget {
 
       try {
         isLoading.value = true;
+        final auth = getIt<FirebaseAuth>();
 
-        final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        final credential = await auth.createUserWithEmailAndPassword(
           email: email,
           password: password,
         );
@@ -52,7 +54,7 @@ class RegisterScreen extends HookWidget {
           'createdAt': Timestamp.now(),
         });
 
-        await FirebaseAuth.instance.signOut();
+        await auth.signOut();
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Registracija uspješna! Prijavite se.')),

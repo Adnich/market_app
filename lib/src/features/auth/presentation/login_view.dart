@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:market_app/src/dependencies.dart';
 
 class LoginView extends HookWidget {
   const LoginView({super.key});
@@ -25,7 +26,8 @@ class LoginView extends HookWidget {
 
       isLoading.value = true;
       try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
+        final auth = getIt<FirebaseAuth>();
+        await auth.signInWithEmailAndPassword(
           email: email,
           password: password,
         );
@@ -68,7 +70,8 @@ class LoginView extends HookWidget {
 
       isLoading.value = true;
       try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        final auth = getIt<FirebaseAuth>();
+        await auth.createUserWithEmailAndPassword(
           email: email,
           password: password,
         );
@@ -99,7 +102,8 @@ class LoginView extends HookWidget {
 
     Future<void> skip() async {
       try {
-        await FirebaseAuth.instance.signInAnonymously();
+        final auth = getIt<FirebaseAuth>();
+        await auth.signInAnonymously();
         toast('Gost pristup omogućen.');
       } on FirebaseAuthException catch (e) {
         debugPrint('FirebaseAuthException [skip]: ${e.code} - ${e.message}');

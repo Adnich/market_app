@@ -6,13 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
+import 'package:market_app/src/dependencies.dart';
 
 class ProfileScreen extends HookWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final auth = getIt<FirebaseAuth>();
+
+    final uid = auth.currentUser!.uid;
 
     final firstName = useState<String?>(null);
     final lastName = useState<String?>(null);
@@ -23,7 +26,6 @@ class ProfileScreen extends HookWidget {
     final imageUrl = useState<String?>(null);
     final isLoading = useState(true);
 
-    // 🔹 Učitavanje podataka o korisniku
     useEffect(() {
       Future<void> loadUserData() async {
         try {
@@ -53,7 +55,6 @@ class ProfileScreen extends HookWidget {
       return null;
     }, []);
 
-    // 🔹 Funkcija za biranje i upload slike
     Future<void> pickAndUploadImage() async {
       final picker = ImagePicker();
       final picked = await picker.pickImage(source: ImageSource.gallery);
@@ -83,13 +84,12 @@ class ProfileScreen extends HookWidget {
       }
     }
 
-    // 🔹 Odjava korisnika
     Future<void> logout() async {
-      await FirebaseAuth.instance.signOut();
+      final auth = getIt<FirebaseAuth>();
+      await auth.signOut();
       if (context.mounted) context.go('/login');
     }
 
-    // 🔹 UI
     return Scaffold(
       appBar: AppBar(title: const Text("Profil")),
       body: isLoading.value
@@ -138,7 +138,6 @@ class ProfileScreen extends HookWidget {
     );
   }
 
-  // 🔹 Pomoćna funkcija za prikaz reda informacija
   Widget _buildProfileRow(String label, String? value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),

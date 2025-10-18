@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:market_app/src/dependencies.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final auth = getIt<FirebaseAuth>();
+    final user = auth.currentUser;
     final label = user == null
         ? 'Gost (nije prijavljen)'
         : (user.isAnonymous ? 'Gost (anonimni)' : 'Prijavljen: ${user.email ?? user.uid}');
@@ -18,7 +20,8 @@ class HomeView extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await FirebaseAuth.instance.signOut();
+              final auth = getIt<FirebaseAuth>();
+              await auth.signOut();
             },
           )
         ],
