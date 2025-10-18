@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:market_app/src/dependencies.dart';
+import 'package:market_app/src/app_router/app_routes.dart'; // ✅ Dodano za centralizovane rute
 import '/screens/add_product_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -12,11 +13,11 @@ class HomeScreen extends StatelessWidget {
     final auth = getIt<FirebaseAuth>(); 
     await auth.signOut();
 
-    context.go('/login');
+    context.go(AppRoutes.login); 
   }
 
   void _goToAddProduct(BuildContext context) {
-    context.push('/add-product');
+    context.push(AppRoutes.addProduct); 
   }
 
   @override
@@ -33,7 +34,7 @@ class HomeScreen extends StatelessWidget {
             icon: const Icon(Icons.person),
             tooltip: 'Moj profil',
             onPressed: () {
-              context.push('/profile');
+              context.push(AppRoutes.profile); 
             },
           ),
           IconButton(
@@ -71,9 +72,9 @@ class HomeScreen extends StatelessWidget {
                   icon: const Icon(Icons.edit),
                   onPressed: () {
                     context.push(
-                      '/add-or-edit-product',
+                      AppRoutes.addOrEditProduct,   
                       extra: {
-                        'productId': products[index].id,
+                          'productId': products[index].id,
                         'existingData': data,
                       },
                     );
