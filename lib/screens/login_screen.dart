@@ -1,104 +1,90 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends HookWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
+  Widget build(BuildContext context) {
+    final emailController = useTextEditingController();
+    final passwordController = useTextEditingController();
+    final authService = useMemoized(() => AuthService());
+    final isLoading = useState(false);
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
+    Future<void> login() async {
+      final email = emailController.text.trim();
+      final password = passwordController.text.trim();
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _login() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      if (mounted) {
-        context.go('/home');
-      }
-
-    } on FirebaseAuthException catch (e) {
-      String message;
-      switch (e.code) {
-        case 'invalid-email':
-          message = 'Email adresa nije ispravna.';
-          break;
-        case 'user-not-found':
-          message = 'Nalog s ovom email adresom ne postoji.';
-          break;
-        case 'wrong-password':
-          message = 'Pogrešna lozinka. Pokušajte ponovo.';
-          break;
-        case 'user-disabled':
-          message = 'Ovaj korisnički nalog je onemogućen.';
-          break;
-        default:
-          message = 'Došlo je do greške prilikom prijave. Pokušajte ponovo.';
-      }
-
-      if (mounted) {
+      if (email.isEmpty || password.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
+          const SnackBar(content: Text('Unesite email i lozinku.')),
         );
+        return;
       }
 
-      rethrow; 
+      try {
+        isLoading.value = true;
 
-    } catch (e, stackTrace) {
-      debugPrint('Neuhvaćena greška kod login-a: $e');
-      debugPrintStack(stackTrace: stackTrace);
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
 
-      if (mounted) {
+        if (context.mounted) context.go('/home');
+      } on FirebaseAuthException catch (e) {
+        String message;
+        switch (e.code) {
+          case 'invalid-email':
+            message = 'Email adresa nije ispravna.';
+            break;
+          case 'user-not-found':
+            message = 'Nalog s ovom email adresom ne postoji.';
+            break;
+          case 'wrong-password':
+            message = 'Pogrešna lozinka. Pokušajte ponovo.';
+            break;
+          case 'user-disabled':
+            message = 'Ovaj korisnički nalog je onemogućen.';
+            break;
+          default:
+            message = 'Došlo je do greške prilikom prijave. Pokušajte ponovo.';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      } catch (e, stackTrace) {
+        debugPrint('Neuhvaćena greška kod login-a: $e');
+        debugPrintStack(stackTrace: stackTrace);
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Došlo je do neočekivane greške. Pokušajte ponovo.'),
-          ),
+          const SnackBar(content: Text('Došlo je do neočekivane greške.')),
         );
+      } finally {
+        isLoading.value = false;
       }
-
-      rethrow;
     }
-  }
 
-  Future<void> _loginWithGoogle() async {
-    try {
-      final result = await _authService.signInWithGoogle();
-      if (result != null && mounted) {
-        context.go('/home');
-      }
-    } catch (e, stackTrace) {
-      debugPrint('Greška pri Google prijavi: $e');
-      debugPrintStack(stackTrace: stackTrace);
+    Future<void> loginWithGoogle() async {
+      try {
+        isLoading.value = true;
+        final result = await authService.signInWithGoogle();
+        if (result != null && context.mounted) {
+          context.go('/home');
+        }
+      } catch (e, stackTrace) {
+        debugPrint('Greška pri Google prijavi: $e');
+        debugPrintStack(stackTrace: stackTrace);
 
-      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString())),
         );
+      } finally {
+        isLoading.value = false;
       }
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Prijava')),
       body: SingleChildScrollView(
@@ -108,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 32),
 
             TextField(
-              controller: _emailController,
+              controller: emailController,
               decoration: const InputDecoration(labelText: 'Email'),
               keyboardType: TextInputType.emailAddress,
             ),
@@ -116,17 +102,19 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
 
             TextField(
-              controller: _passwordController,
+              controller: passwordController,
               decoration: const InputDecoration(labelText: 'Lozinka'),
               obscureText: true,
             ),
 
             const SizedBox(height: 32),
 
-            ElevatedButton(
-              onPressed: _login,
-              child: const Text('Prijavi se'),
-            ),
+            isLoading.value
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: login,
+                    child: const Text('Prijavi se'),
+                  ),
 
             const SizedBox(height: 16),
             const Divider(height: 32),
@@ -137,8 +125,9 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
 
             ElevatedButton.icon(
-              onPressed: _loginWithGoogle,
+              onPressed: loginWithGoogle,
               label: const Text('Nastavi s Google nalogom'),
+              icon: const Icon(Icons.login),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
@@ -155,9 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
 
             ElevatedButton(
-              onPressed: () {
-                context.go('/home');
-              },
+              onPressed: () => context.go('/home'),
               child: const Text('Posjeti bez prijave'),
             ),
           ],

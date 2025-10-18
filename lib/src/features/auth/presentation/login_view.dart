@@ -1,147 +1,120 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class LoginView extends StatefulWidget {
+class LoginView extends HookWidget {
   const LoginView({super.key});
-  @override
-  State<LoginView> createState() => _LoginViewState();
-}
-
-class _LoginViewState extends State<LoginView> {
-  final _email = TextEditingController();
-  final _pass = TextEditingController();
-  bool _loading = false;
-
-  void _toast(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-
-  Future<void> _loginEmail() async {
-    final email = _email.text.trim();
-    final password = _pass.text;
-
-    if (email.isEmpty || password.isEmpty) {
-      _toast('Unesite email i lozinku.');
-      return;
-    }
-
-    setState(() => _loading = true);
-
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      _toast('Prijava uspješna.');
-
-    } on FirebaseAuthException catch (e) {
-      debugPrint('FirebaseAuthException [loginEmail]: ${e.code} - ${e.message}');
-      String message;
-      switch (e.code) {
-        case 'invalid-email':
-          message = 'Email adresa nije ispravna.';
-          break;
-        case 'user-not-found':
-          message = 'Nalog s ovom email adresom ne postoji.';
-          break;
-        case 'wrong-password':
-          message = 'Pogrešna lozinka. Pokušajte ponovo.';
-          break;
-        case 'user-disabled':
-          message = 'Ovaj korisnički nalog je onemogućen.';
-          break;
-        default:
-          message = 'Greška pri prijavi. Pokušajte ponovo.';
-      }
-      _toast(message);
-      rethrow;
-
-    } catch (e, stackTrace) {
-      debugPrint('Neuhvaćena greška [loginEmail]: $e');
-      debugPrintStack(stackTrace: stackTrace);
-      _toast('Došlo je do neočekivane greške. Pokušajte ponovo.');
-      rethrow;
-
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _registerEmail() async {
-    final email = _email.text.trim();
-    final password = _pass.text;
-
-    if (email.isEmpty || password.length < 6) {
-      _toast('Unesite ispravan email i lozinku (min. 6 znakova).');
-      return;
-    }
-
-    setState(() => _loading = true);
-
-    try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      _toast('Registracija uspješna.');
-
-    } on FirebaseAuthException catch (e) {
-      debugPrint('FirebaseAuthException [registerEmail]: ${e.code} - ${e.message}');
-      String message;
-      switch (e.code) {
-        case 'email-already-in-use':
-          message = 'Ova email adresa je već registrovana.';
-          break;
-        case 'invalid-email':
-          message = 'Email adresa nije ispravna.';
-          break;
-        case 'weak-password':
-          message = 'Lozinka je preslaba. Unesite jaču lozinku.';
-          break;
-        default:
-          message = 'Greška pri registraciji. Pokušajte ponovo.';
-      }
-      _toast(message);
-      rethrow;
-
-    } catch (e, stackTrace) {
-      debugPrint('Neuhvaćena greška [registerEmail]: $e');
-      debugPrintStack(stackTrace: stackTrace);
-      _toast('Došlo je do neočekivane greške. Pokušajte ponovo.');
-      rethrow;
-
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _skip() async {
-    try {
-      await FirebaseAuth.instance.signInAnonymously();
-      _toast('Gost pristup omogućen.');
-
-    } on FirebaseAuthException catch (e) {
-      debugPrint('FirebaseAuthException [skip]: ${e.code} - ${e.message}');
-      String message;
-      switch (e.code) {
-        case 'operation-not-allowed':
-          message = 'Gost prijava trenutno nije dozvoljena.';
-          break;
-        default:
-          message = 'Greška pri gost prijavi. Pokušajte ponovo.';
-      }
-      _toast(message);
-      rethrow;
-
-    } catch (e, stackTrace) {
-      debugPrint('Neuhvaćena greška [skip]: $e');
-      debugPrintStack(stackTrace: stackTrace);
-      _toast('Došlo je do neočekivane greške.');
-      rethrow;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
+    final emailController = useTextEditingController();
+    final passController = useTextEditingController();
+    final isLoading = useState(false);
+
+    void toast(String msg) =>
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
+    Future<void> loginEmail() async {
+      final email = emailController.text.trim();
+      final password = passController.text;
+
+      if (email.isEmpty || password.isEmpty) {
+        toast('Unesite email i lozinku.');
+        return;
+      }
+
+      isLoading.value = true;
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        toast('Prijava uspješna.');
+      } on FirebaseAuthException catch (e) {
+        debugPrint('FirebaseAuthException [loginEmail]: ${e.code} - ${e.message}');
+        switch (e.code) {
+          case 'invalid-email':
+            toast('Email adresa nije ispravna.');
+            break;
+          case 'user-not-found':
+            toast('Nalog s ovom email adresom ne postoji.');
+            break;
+          case 'wrong-password':
+            toast('Pogrešna lozinka. Pokušajte ponovo.');
+            break;
+          case 'user-disabled':
+            toast('Ovaj korisnički nalog je onemogućen.');
+            break;
+          default:
+            toast('Greška pri prijavi. Pokušajte ponovo.');
+        }
+      } catch (e, stack) {
+        debugPrint('Greška [loginEmail]: $e');
+        debugPrintStack(stackTrace: stack);
+        toast('Došlo je do neočekivane greške.');
+      } finally {
+        isLoading.value = false;
+      }
+    }
+
+    Future<void> registerEmail() async {
+      final email = emailController.text.trim();
+      final password = passController.text;
+
+      if (email.isEmpty || password.length < 6) {
+        toast('Unesite ispravan email i lozinku (min. 6 znakova).');
+        return;
+      }
+
+      isLoading.value = true;
+      try {
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        toast('Registracija uspješna.');
+      } on FirebaseAuthException catch (e) {
+        debugPrint('FirebaseAuthException [registerEmail]: ${e.code} - ${e.message}');
+        switch (e.code) {
+          case 'email-already-in-use':
+            toast('Ova email adresa je već registrovana.');
+            break;
+          case 'invalid-email':
+            toast('Email adresa nije ispravna.');
+            break;
+          case 'weak-password':
+            toast('Lozinka je preslaba. Unesite jaču lozinku.');
+            break;
+          default:
+            toast('Greška pri registraciji. Pokušajte ponovo.');
+        }
+      } catch (e, stack) {
+        debugPrint('Greška [registerEmail]: $e');
+        debugPrintStack(stackTrace: stack);
+        toast('Došlo je do neočekivane greške.');
+      } finally {
+        isLoading.value = false;
+      }
+    }
+
+    Future<void> skip() async {
+      try {
+        await FirebaseAuth.instance.signInAnonymously();
+        toast('Gost pristup omogućen.');
+      } on FirebaseAuthException catch (e) {
+        debugPrint('FirebaseAuthException [skip]: ${e.code} - ${e.message}');
+        if (e.code == 'operation-not-allowed') {
+          toast('Gost prijava trenutno nije dozvoljena.');
+        } else {
+          toast('Greška pri gost prijavi. Pokušajte ponovo.');
+        }
+      } catch (e, stack) {
+        debugPrint('Greška [skip]: $e');
+        debugPrintStack(stackTrace: stack);
+        toast('Došlo je do neočekivane greške.');
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Login / Register')),
       body: Padding(
@@ -149,30 +122,31 @@ class _LoginViewState extends State<LoginView> {
         child: Column(
           children: [
             TextField(
-              controller: _email,
+              controller: emailController,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(labelText: 'Email'),
             ),
             const SizedBox(height: 8),
             TextField(
-              controller: _pass,
+              controller: passController,
               obscureText: true,
               decoration: const InputDecoration(labelText: 'Password'),
             ),
             const SizedBox(height: 16),
-            if (_loading) const CircularProgressIndicator(),
-            if (!_loading) ...[
+            if (isLoading.value)
+              const CircularProgressIndicator()
+            else ...[
               ElevatedButton(
-                onPressed: _loginEmail,
+                onPressed: loginEmail,
                 child: const Text('Login (Email/Pass)'),
               ),
               OutlinedButton(
-                onPressed: _registerEmail,
+                onPressed: registerEmail,
                 child: const Text('Register (Email/Pass)'),
               ),
               const SizedBox(height: 8),
               TextButton(
-                onPressed: _skip,
+                onPressed: skip,
                 child: const Text('Skip for now'),
               ),
             ],

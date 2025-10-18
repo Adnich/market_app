@@ -3,106 +3,65 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends HookWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
+  Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  String? firstName;
-  String? lastName;
-  String? email;
-  String? phone;
-  String? dateOfBirth;
-  String? gender;
-  String? imageUrl;
+    final firstName = useState<String?>(null);
+    final lastName = useState<String?>(null);
+    final email = useState<String?>(null);
+    final phone = useState<String?>(null);
+    final dateOfBirth = useState<String?>(null);
+    final gender = useState<String?>(null);
+    final imageUrl = useState<String?>(null);
+    final isLoading = useState(true);
 
-  final String uid = FirebaseAuth.instance.currentUser!.uid;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-    _loadProfileImage();
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (doc.exists) {
-        final data = doc.data()!;
-        setState(() {
-          firstName = data['firstName'];
-          lastName = data['lastName'];
-          email = data['email'];
-          phone = data['phone'];
-          dateOfBirth = data['dateOfBirth'];
-          gender = data['gender'];
-          imageUrl = data['photoUrl'];
-        });
-      }
-    } on FirebaseException catch (e) {
-      debugPrint('FirebaseException [loadUserData]: ${e.code} - ${e.message}');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Greška pri učitavanju korisničkih podataka. Pokušajte ponovo.'),
-          ),
-        );
-      }
-      rethrow;
-    } catch (e, stackTrace) {
-      debugPrint('Neuhvaćena greška [loadUserData]: $e');
-      debugPrintStack(stackTrace: stackTrace);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Došlo je do neočekivane greške.')),
-        );
-      }
-      rethrow;
-    }
-  }
-
-  Future<void> _loadProfileImage() async {
-    try {
-      final url = await FirebaseStorage.instance
-          .ref('profile_pictures/$uid.jpg')
-          .getDownloadURL();
-      setState(() {
-        imageUrl = url;
-      });
-    } on FirebaseException catch (e) {
-      if (e.code != 'object-not-found') {
-        debugPrint('FirebaseException [loadProfileImage]: ${e.code} - ${e.message}');
-        if (mounted) {
+    // 🔹 Učitavanje podataka o korisniku
+    useEffect(() {
+      Future<void> loadUserData() async {
+        try {
+          final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+          if (doc.exists) {
+            final data = doc.data()!;
+            firstName.value = data['firstName'];
+            lastName.value = data['lastName'];
+            email.value = data['email'];
+            phone.value = data['phone'];
+            dateOfBirth.value = data['dateOfBirth'];
+            gender.value = data['gender'];
+            imageUrl.value = data['photoUrl'];
+          }
+        } catch (e, stack) {
+          debugPrint('Greška [loadUserData]: $e');
+          debugPrintStack(stackTrace: stack);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Greška pri učitavanju slike profila.')),
+            const SnackBar(content: Text('Greška pri učitavanju korisničkih podataka.')),
           );
+        } finally {
+          isLoading.value = false;
         }
       }
-    } catch (e, stackTrace) {
-      debugPrint('Neuhvaćena greška [loadProfileImage]: $e');
-      debugPrintStack(stackTrace: stackTrace);
-    }
-  }
 
-  Future<void> _pickAndUploadImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
+      loadUserData();
+      return null;
+    }, []);
 
-    if (picked != null) {
+    // 🔹 Funkcija za biranje i upload slike
+    Future<void> pickAndUploadImage() async {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.gallery);
+      if (picked == null) return;
+
       final file = File(picked.path);
-
       try {
-        await FirebaseStorage.instance
-            .ref('profile_pictures/$uid.jpg')
-            .putFile(file);
-
+        await FirebaseStorage.instance.ref('profile_pictures/$uid.jpg').putFile(file);
         final downloadUrl = await FirebaseStorage.instance
             .ref('profile_pictures/$uid.jpg')
             .getDownloadURL();
@@ -111,104 +70,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
           'photoUrl': downloadUrl,
         });
 
-        setState(() {
-          imageUrl = downloadUrl;
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Slika profila je uspješno ažurirana')),
-          );
-        }
-
-      } on FirebaseException catch (e) {
-        debugPrint('FirebaseException [pickAndUploadImage]: ${e.code} - ${e.message}');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Greška pri slanju slike. Pokušajte ponovo.')),
-          );
-        }
-        rethrow;
-      } catch (e, stackTrace) {
-        debugPrint('Neuhvaćena greška [pickAndUploadImage]: $e');
-        debugPrintStack(stackTrace: stackTrace);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Došlo je do neočekivane greške.')),
-          );
-        }
-        rethrow;
+        imageUrl.value = downloadUrl;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Slika profila je uspješno ažurirana')),
+        );
+      } catch (e, stack) {
+        debugPrint('Greška [pickAndUploadImage]: $e');
+        debugPrintStack(stackTrace: stack);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Greška pri slanju slike.')),
+        );
       }
     }
-  }
 
-  void _logout() async {
-  await FirebaseAuth.instance.signOut();
-  if (mounted) {
-    context.go('/login');
-  }
-}
+    // 🔹 Odjava korisnika
+    Future<void> logout() async {
+      await FirebaseAuth.instance.signOut();
+      if (context.mounted) context.go('/login');
+    }
 
-
-  @override
-  Widget build(BuildContext context) {
+    // 🔹 UI
     return Scaffold(
       appBar: AppBar(title: const Text("Profil")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: _pickAndUploadImage,
-              child: CircleAvatar(
-                radius: 60,
-                backgroundImage:
-                    imageUrl != null ? NetworkImage(imageUrl!) : null,
-                child: imageUrl == null
-                    ? const Icon(Icons.person, size: 60)
-                    : null,
+      body: isLoading.value
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: pickAndUploadImage,
+                    child: CircleAvatar(
+                      radius: 60,
+                      backgroundImage: imageUrl.value != null
+                          ? NetworkImage(imageUrl.value!)
+                          : null,
+                      child: imageUrl.value == null
+                          ? const Icon(Icons.person, size: 60)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  _buildProfileRow("Ime", firstName.value),
+                  _buildProfileRow("Prezime", lastName.value),
+                  _buildProfileRow("Email", email.value),
+                  _buildProfileRow("Telefon", phone.value),
+                  _buildProfileRow("Datum rođenja", dateOfBirth.value),
+                  _buildProfileRow("Spol", gender.value),
+
+                  const SizedBox(height: 30),
+                  ElevatedButton.icon(
+                    onPressed: () => context.push('/edit-profile'),
+                    icon: const Icon(Icons.edit),
+                    label: const Text("Uredi profil"),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    onPressed: logout,
+                    icon: const Icon(Icons.logout),
+                    label: const Text("Odjavi se"),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            _buildProfileRow("Ime", firstName),
-            _buildProfileRow("Prezime", lastName),
-            _buildProfileRow("Email", email),
-            _buildProfileRow("Telefon", phone),
-            _buildProfileRow("Datum rođenja", dateOfBirth),
-            _buildProfileRow("Spol", gender),
-
-            const SizedBox(height: 30),
-            ElevatedButton.icon(
-              onPressed: () {
-                context.push('/edit-profile');
-              },
-              icon: const Icon(Icons.edit),
-              label: const Text("Uredi profil"),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: _logout,
-              icon: const Icon(Icons.logout),
-              label: const Text("Odjavi se"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
+  // 🔹 Pomoćna funkcija za prikaz reda informacija
   Widget _buildProfileRow(String label, String? value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("$label: ",
-              style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
           Expanded(child: Text(value ?? "-", softWrap: true)),
         ],
       ),
