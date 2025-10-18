@@ -64,19 +64,18 @@ class HomeScreen extends StatelessWidget {
                 title: Text(data['name'] ?? 'Bez naziva'),
                 subtitle: Text('Cijena: ${data['price'] ?? 'N/A'} KM'),
                 trailing: IconButton(
-  icon: const Icon(Icons.edit),
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AddOrEditProductScreen(
-          productId: products[index].id,
-          existingData: data,
+          icon: const Icon(Icons.edit),
+          onPressed: () {
+          context.push(
+          '/add-or-edit-product',
+          extra: {
+            'productId': products[index].id,
+            'existingData': data,
+          },
+        );
+
+          },
         ),
-      ),
-    );
-  },
-),
 
               );
             },

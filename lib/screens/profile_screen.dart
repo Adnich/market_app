@@ -143,11 +143,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/login');
-    }
+  await FirebaseAuth.instance.signOut();
+  if (mounted) {
+    context.go('/login');
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

@@ -138,10 +138,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
             ElevatedButton.icon(
               onPressed: _loginWithGoogle,
-              icon: Image.asset(
-                'assets/google_logo.png',
-                height: 24,
-              ),
               label: const Text('Nastavi s Google nalogom'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,

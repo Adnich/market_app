@@ -54,5 +54,16 @@ final GoRouter appRouter = GoRouter(
       path: '/edit-profile',
       builder: (context, state) => const EditProfileScreen(),
     ),
+    GoRoute(
+  path: '/add-or-edit-product',
+  builder: (context, state) {
+    final extras = state.extra as Map<String, dynamic>?;
+    return AddOrEditProductScreen(
+      productId: extras?['productId'],
+      existingData: extras?['existingData'],
+    );
+  },
+),
+
   ],
 );
