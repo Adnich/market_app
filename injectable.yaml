@@ -1,0 +1,9 @@
+generate_for:
+  - lib/**.dart
+
+include_glob:
+  - lib/src/modules/**.dart
+
+output:
+  directory: lib/src
+  file_name: dependencies.config.dart

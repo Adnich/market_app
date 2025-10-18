@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:market_app/src/dependencies.dart';
 
 class AddOrEditProductScreen extends HookWidget {
   final String? productId;
@@ -30,11 +31,12 @@ class AddOrEditProductScreen extends HookWidget {
         descriptionController.text = existingData!['description'] ?? '';
         imageUrl.value = existingData!['imageUrl'];
       }
-      return null; 
+      return null;
     }, []);
 
     Future<void> pickImage() async {
-      final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+      final picker = getIt<ImagePicker>();
+      final picked = await picker.pickImage(source: ImageSource.gallery);
       if (picked != null) {
         pickedImage.value = File(picked.path);
       }
@@ -63,14 +65,16 @@ class AddOrEditProductScreen extends HookWidget {
       };
 
       try {
+        final firestore = FirebaseFirestore.instance;
+
         if (productId == null) {
-          final docRef = await FirebaseFirestore.instance.collection('products').add(data);
+          final docRef = await firestore.collection('products').add(data);
           final newImageUrl = await uploadImage(docRef.id);
           await docRef.update({'imageUrl': newImageUrl});
         } else {
           final newImageUrl = await uploadImage(productId!);
           data['imageUrl'] = newImageUrl ?? imageUrl.value ?? '';
-          await FirebaseFirestore.instance.collection('products').doc(productId!).update(data);
+          await firestore.collection('products').doc(productId!).update(data);
         }
 
         if (context.mounted) {
@@ -98,7 +102,6 @@ class AddOrEditProductScreen extends HookWidget {
       } catch (e, stackTrace) {
         debugPrint('Neočekivana greška: $e');
         debugPrintStack(stackTrace: stackTrace);
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Došlo je do neočekivane greške.')),
         );
@@ -107,6 +110,7 @@ class AddOrEditProductScreen extends HookWidget {
       isLoading.value = false;
     }
 
+    // 🔹 UI
     return Scaffold(
       appBar: AppBar(
         title: Text(productId == null ? 'Dodaj proizvod' : 'Izmijeni proizvod'),
