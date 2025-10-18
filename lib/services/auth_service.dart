@@ -38,7 +38,7 @@ class AuthService {
 
      
       debugPrint('FirebaseAuthException [Google Sign-In]: ${e.code} - ${e.message}');
-      throw Exception(message); 
+      rethrow;
 
     } catch (e, stackTrace) {
 
