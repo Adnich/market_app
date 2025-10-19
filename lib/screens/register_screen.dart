@@ -45,22 +45,22 @@ class RegisterScreen extends HookWidget {
         );
 
         final uid = credential.user!.uid;
-await FirebaseFirestore.instance.collection('users').doc(uid).set({
-  'name': '$name $lastName',
-  'email': email,
-  'phone': phone,
-  'dateOfBirth': dateOfBirth,
-  'gender': gender,
-  'photoUrl': '',
-  'createdAt': Timestamp.now(),
-});
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'name': '$name $lastName',
+          'email': email,
+          'phone': phone,
+          'dateOfBirth': dateOfBirth,
+          'gender': gender,
+          'photoUrl': '',
+          'createdAt': Timestamp.now(),
+        });
 
 
         ScaffoldMessenger.of(context).showSnackBar(
-  const SnackBar(content: Text('Registracija uspješna!')),
-);
+        const SnackBar(content: Text('Registracija uspješna!')),
+      );
 
-if (context.mounted) context.go('/home'); // ili '/profile' ako želiš odmah profil
+      if (context.mounted) context.go('/home'); 
 
 
       } on FirebaseAuthException catch (e) {

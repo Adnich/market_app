@@ -16,7 +16,6 @@ class ProfileScreen extends HookWidget {
     final auth = getIt<FirebaseAuth>();
     final user = auth.currentUser;
 
-    // ✅ Provjera da li je korisnik prijavljen
     if (user == null) {
       return const Scaffold(
         body: Center(child: Text("Korisnik nije prijavljen.")),
@@ -48,7 +47,7 @@ class ProfileScreen extends HookWidget {
           }
 
           final data = doc.data();
-          debugPrint('✅ Dokument pronađen: $data');
+          debugPrint('Dokument pronađen: $data');
 
           name.value = data?['firstName'] ?? data?['name'] ?? '-';
           email.value = data?['email'] ?? '-';
@@ -57,7 +56,7 @@ class ProfileScreen extends HookWidget {
           gender.value = data?['gender'] ?? '-';
           imageUrl.value = data?['photoUrl'] ?? '';
         } catch (e, stack) {
-          debugPrint('❌ Greška [loadUserData]: $e');
+          debugPrint('Greška [loadUserData]: $e');
           debugPrintStack(stackTrace: stack);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Greška: $e')),

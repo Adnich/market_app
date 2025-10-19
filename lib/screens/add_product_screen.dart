@@ -26,12 +26,10 @@ class AddOrEditProductScreen extends HookWidget {
     final imageUrl = useState<String?>(null);
     final isLoading = useState(false);
 
-    // 🔹 Injektovani servisi
     final storage = getIt<FirebaseStorage>();
     final picker = getIt<ImagePicker>();
     final repository = ProductRepository();
 
-    // 🔹 Ako uređujemo postojeći proizvod, popuni polja
     useEffect(() {
       if (existingData != null) {
         nameController.text = existingData!['name'] ?? '';
@@ -42,7 +40,6 @@ class AddOrEditProductScreen extends HookWidget {
       return null;
     }, []);
 
-    // 🔹 Odabir slike
     Future<void> pickImage() async {
       final picked = await picker.pickImage(source: ImageSource.gallery);
       if (picked != null) {
@@ -50,7 +47,6 @@ class AddOrEditProductScreen extends HookWidget {
       }
     }
 
-    // 🔹 Upload slike u Firebase Storage
     Future<String?> uploadImage(String productId) async {
       if (pickedImage.value == null) return imageUrl.value;
       final ref = storage.ref().child('product_images').child('$productId.jpg');
@@ -58,7 +54,6 @@ class AddOrEditProductScreen extends HookWidget {
       return await ref.getDownloadURL();
     }
 
-    // 🔹 Spremi proizvod (novi ili postojeći)
     Future<void> saveProduct() async {
       if (!formKey.currentState!.validate()) return;
       isLoading.value = true;
@@ -77,7 +72,6 @@ class AddOrEditProductScreen extends HookWidget {
         String id = productId ?? '';
 
         if (productId == null) {
-          // ➕ Novi proizvod
           id = await repository.addProduct(productData);
           final newImageUrl = await uploadImage(id);
           if (newImageUrl != null) {
@@ -87,7 +81,6 @@ class AddOrEditProductScreen extends HookWidget {
             );
           }
         } else {
-          // ✏️ Ažuriranje postojećeg proizvoda
           final newImageUrl = await uploadImage(productId!);
           await repository.updateProduct(
             productId!,

@@ -25,9 +25,9 @@ class HomeScreen extends StatelessWidget {
     final auth = getIt<FirebaseAuth>();
     final user = auth.currentUser;
     final bool isGuest =
-        user == null || user.isAnonymous; // ✅ prepoznaje gosta
+        user == null || user.isAnonymous; 
 
-    final repository = ProductRepository(); // ✅ koristi repozitorij umjesto Firestore
+    final repository = ProductRepository(); 
 
     return Scaffold(
       appBar: AppBar(
@@ -49,7 +49,6 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
 
-      // 🔹 FAB se prikazuje SAMO ako je korisnik prijavljen
       floatingActionButton: isGuest
           ? null
           : FloatingActionButton(
@@ -58,7 +57,7 @@ class HomeScreen extends StatelessWidget {
             ),
 
       body: StreamBuilder<List<Product>>(
-        stream: repository.getProductsStream(), // ✅ koristi stream iz repozitorija
+        stream: repository.getProductsStream(), 
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -97,7 +96,6 @@ class HomeScreen extends StatelessWidget {
                     'Cijena: ${product.price.toStringAsFixed(2)} KM\nOpis: ${product.description}',
                   ),
 
-                  // ✏️ ikonica za edit prikazuje se samo ako nije gost
                   trailing: isGuest
                       ? null
                       : IconButton(

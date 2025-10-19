@@ -9,10 +9,8 @@ import '../dependencies.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Inicijalizuj dependency injection (FirebaseModule, UtilityModule, itd.)
   await configureDependencies('prod');
 
-  // 🔹 Zadrži postojeću Firebase inicijalizaciju ako je koristiš eksplicitno
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(
       options: prod.DefaultFirebaseOptions.currentPlatform,

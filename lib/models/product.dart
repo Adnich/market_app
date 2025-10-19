@@ -23,7 +23,6 @@ class Product with ProductMappable {
     required this.createdAt,
   });
 
-  /// ✅ Kreira Product iz Firestore dokumenta
   factory Product.fromFirestore(Map<String, dynamic> data, String id) {
     return Product(
       id: id,
@@ -38,7 +37,6 @@ class Product with ProductMappable {
     );
   }
 
-  /// ✅ Pretvara Product u mapu spremnu za Firestore
   Map<String, dynamic> toFirestore() {
     return {
       'name': name,
