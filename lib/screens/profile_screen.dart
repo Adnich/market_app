@@ -14,11 +14,18 @@ class ProfileScreen extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final auth = getIt<FirebaseAuth>();
+    final user = auth.currentUser;
 
-    final uid = auth.currentUser!.uid;
+    // ✅ Provjera da li je korisnik prijavljen
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text("Korisnik nije prijavljen.")),
+      );
+    }
 
-    final firstName = useState<String?>(null);
-    final lastName = useState<String?>(null);
+    final uid = user.uid;
+
+    final name = useState<String?>(null);
     final email = useState<String?>(null);
     final phone = useState<String?>(null);
     final dateOfBirth = useState<String?>(null);
@@ -29,22 +36,31 @@ class ProfileScreen extends HookWidget {
     useEffect(() {
       Future<void> loadUserData() async {
         try {
+          debugPrint('📘 Pokušavam učitati korisnika UID: $uid');
           final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-          if (doc.exists) {
-            final data = doc.data()!;
-            firstName.value = data['firstName'];
-            lastName.value = data['lastName'];
-            email.value = data['email'];
-            phone.value = data['phone'];
-            dateOfBirth.value = data['dateOfBirth'];
-            gender.value = data['gender'];
-            imageUrl.value = data['photoUrl'];
+
+          if (!doc.exists) {
+            debugPrint('⚠️ Dokument za UID $uid ne postoji.');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Nema podataka o korisniku.')),
+            );
+            return;
           }
+
+          final data = doc.data();
+          debugPrint('✅ Dokument pronađen: $data');
+
+          name.value = data?['firstName'] ?? data?['name'] ?? '-';
+          email.value = data?['email'] ?? '-';
+          phone.value = data?['phone'] ?? '-';
+          dateOfBirth.value = data?['dateOfBirth'] ?? '-';
+          gender.value = data?['gender'] ?? '-';
+          imageUrl.value = data?['photoUrl'] ?? '';
         } catch (e, stack) {
-          debugPrint('Greška [loadUserData]: $e');
+          debugPrint('❌ Greška [loadUserData]: $e');
           debugPrintStack(stackTrace: stack);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Greška pri učitavanju korisničkih podataka.')),
+            SnackBar(content: Text('Greška: $e')),
           );
         } finally {
           isLoading.value = false;
@@ -102,18 +118,17 @@ class ProfileScreen extends HookWidget {
                     onTap: pickAndUploadImage,
                     child: CircleAvatar(
                       radius: 60,
-                      backgroundImage: imageUrl.value != null
+                      backgroundImage: imageUrl.value != null && imageUrl.value!.isNotEmpty
                           ? NetworkImage(imageUrl.value!)
                           : null,
-                      child: imageUrl.value == null
+                      child: imageUrl.value == null || imageUrl.value!.isEmpty
                           ? const Icon(Icons.person, size: 60)
                           : null,
                     ),
                   ),
                   const SizedBox(height: 24),
 
-                  _buildProfileRow("Ime", firstName.value),
-                  _buildProfileRow("Prezime", lastName.value),
+                  _buildProfileRow("Ime", name.value),
                   _buildProfileRow("Email", email.value),
                   _buildProfileRow("Telefon", phone.value),
                   _buildProfileRow("Datum rođenja", dateOfBirth.value),
