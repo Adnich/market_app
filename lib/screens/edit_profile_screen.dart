@@ -41,12 +41,14 @@ class EditProfileScreen extends HookWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Greška pri učitavanju podataka. Pokušajte ponovo.')),
           );
+          rethrow; 
         } catch (e, stackTrace) {
           debugPrint('Neuhvaćena greška [loadUserData]: $e');
           debugPrintStack(stackTrace: stackTrace);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Došlo je do neočekivane greške.')),
           );
+          rethrow; 
         }
       }
 
@@ -62,7 +64,7 @@ class EditProfileScreen extends HookWidget {
         await userRepo
             .getUserDoc()
             .then((_) async {
-          await userRepo.refreshUser(); 
+          await userRepo.refreshUser();
           await userRepo.firestore
               .collection('users')
               .doc(uid)
@@ -94,12 +96,14 @@ class EditProfileScreen extends HookWidget {
 
         debugPrint('FirebaseException [saveChanges]: ${e.code} - ${e.message}');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        rethrow; 
       } catch (e, stackTrace) {
         debugPrint('Neuhvaćena greška [saveChanges]: $e');
         debugPrintStack(stackTrace: stackTrace);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Došlo je do neočekivane greške.')),
         );
+        rethrow; 
       } finally {
         isLoading.value = false;
       }
