@@ -9,13 +9,11 @@ import 'package:market_app/src/injection.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await configureDependencies;
+  await Firebase.initializeApp(
+    options: dev.DefaultFirebaseOptions.currentPlatform,
+  );
 
-  if (Firebase.apps.isEmpty) {
-    await Firebase.initializeApp(
-      options: dev.DefaultFirebaseOptions.currentPlatform,
-    );
-  }
+  await configureDependencies;
 
   const FlavorConfig flavor = DevConfig();
   runApp(App(flavor: flavor));
