@@ -1,9 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:market_app/src/dependencies.dart';
 import 'package:market_app/src/app_router/app_routes.dart';
+import 'package:market_app/models/product.dart';
+import 'package:market_app/repositories/product_repository.dart';
 import '/screens/add_product_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -22,17 +23,17 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = getIt<FirebaseAuth>();
-    final firestore = getIt<FirebaseFirestore>();
     final user = auth.currentUser;
-
     final bool isGuest =
         user == null || user.isAnonymous; // ✅ prepoznaje gosta
+
+    final repository = ProductRepository(); // ✅ koristi repozitorij umjesto Firestore
 
     return Scaffold(
       appBar: AppBar(
         title: Text('Dobrodošli, ${user?.email ?? 'posjetioče'}'),
         actions: [
-          if (!isGuest) // 👈 prikazuje profil samo ako je prijavljen
+          if (!isGuest)
             IconButton(
               icon: const Icon(Icons.person),
               tooltip: 'Moj profil',
@@ -56,8 +57,8 @@ class HomeScreen extends StatelessWidget {
               child: const Icon(Icons.add),
             ),
 
-      body: StreamBuilder<QuerySnapshot>(
-        stream: firestore.collection('products').snapshots(),
+      body: StreamBuilder<List<Product>>(
+        stream: repository.getProductsStream(), // ✅ koristi stream iz repozitorija
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -68,65 +69,51 @@ class HomeScreen extends StatelessWidget {
                 child: Text('Greška pri učitavanju: ${snapshot.error}'));
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          final products = snapshot.data ?? [];
+
+          if (products.isEmpty) {
             return const Center(child: Text('Nema unesenih proizvoda.'));
           }
-
-          final products = snapshot.data!.docs;
 
           return ListView.builder(
             itemCount: products.length,
             itemBuilder: (context, index) {
-              try {
-                final data = products[index].data() as Map<String, dynamic>;
-                final name = data['name'] ?? 'Bez naziva';
-                final price = (data['price'] is num)
-                    ? (data['price'] as num).toDouble()
-                    : 0.0;
-                final description = data['description'] ?? '';
-                final imageUrl = data['imageUrl'];
+              final product = products[index];
 
-                return Card(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: ListTile(
-                    leading: imageUrl != null && imageUrl.toString().isNotEmpty
-                        ? Image.network(
-                            imageUrl,
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                          )
-                        : const Icon(Icons.image_not_supported),
-                    title: Text(name),
-                    subtitle: Text(
-                      'Cijena: ${price.toStringAsFixed(2)} KM\nOpis: $description',
-                    ),
-
-                    // ✏️ ikonica za edit prikazuje se samo ako nije gost
-                    trailing: isGuest
-                        ? null
-                        : IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () {
-                              context.push(
-                                AppRoutes.addOrEditProduct,
-                                extra: {
-                                  'productId': products[index].id,
-                                  'existingData': data,
-                                },
-                              );
-                            },
-                          ),
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: ListTile(
+                  leading: product.imageUrl != null &&
+                          product.imageUrl!.isNotEmpty
+                      ? Image.network(
+                          product.imageUrl!,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                        )
+                      : const Icon(Icons.image_not_supported),
+                  title: Text(product.name),
+                  subtitle: Text(
+                    'Cijena: ${product.price.toStringAsFixed(2)} KM\nOpis: ${product.description}',
                   ),
-                );
-              } catch (e, st) {
-                debugPrint('⚠️ Greška pri prikazu proizvoda: $e');
-                debugPrintStack(stackTrace: st);
-                return const ListTile(
-                  title: Text('Greška pri učitavanju proizvoda'),
-                );
-              }
+
+                  // ✏️ ikonica za edit prikazuje se samo ako nije gost
+                  trailing: isGuest
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () {
+                            context.push(
+                              AppRoutes.addOrEditProduct,
+                              extra: {
+                                'productId': product.id,
+                                'existingData': product.toFirestore(),
+                              },
+                            );
+                          },
+                        ),
+                ),
+              );
             },
           );
         },
