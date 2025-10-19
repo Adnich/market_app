@@ -56,6 +56,8 @@ class AddOrEditProductScreen extends HookWidget {
 
     Future<void> saveProduct() async {
       if (!formKey.currentState!.validate()) return;
+      debugPrint(' Počinjem spremanje proizvoda...');
+
       isLoading.value = true;
 
       final productData = Product(
@@ -67,6 +69,7 @@ class AddOrEditProductScreen extends HookWidget {
         available: true,
         createdAt: Timestamp.now(),
       );
+      debugPrint(' Spremam novi proizvod u Firestore...');
 
       try {
         String id = productId ?? '';
@@ -111,6 +114,8 @@ class AddOrEditProductScreen extends HookWidget {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(message)));
       } catch (e, stackTrace) {
+        debugPrint('❌ Greška u saveProduct(): $e');
+
         debugPrint('Neočekivana greška: $e');
         debugPrintStack(stackTrace: stackTrace);
         ScaffoldMessenger.of(context).showSnackBar(

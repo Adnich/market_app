@@ -41,3 +41,42 @@ class ProductRepository {
     });
   }
 }
+
+// ⬇️ Pomoćna struktura za rezultat jedne "stranice"
+class PageResult<T> {
+  final List<T> items;
+  final DocumentSnapshot? lastDoc;
+  PageResult({required this.items, required this.lastDoc});
+}
+
+extension ProductPaging on ProductRepository {
+  /// Učitaj prvu stranicu proizvoda
+  Future<PageResult<Product>> getFirstPage({int limit = 10}) async {
+    final query = _firestore
+        .collection('products')
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+
+    final snap = await query.get();
+    final items = snap.docs.map((d) => Product.fromFirestore(d)).toList();
+    final last = snap.docs.isNotEmpty ? snap.docs.last : null;
+    return PageResult(items: items, lastDoc: last);
+  }
+
+  /// Učitaj sljedeću stranicu nakon lastDoc
+  Future<PageResult<Product>> getNextPage({
+    required DocumentSnapshot lastDoc,
+    int limit = 10,
+  }) async {
+    final query = _firestore
+        .collection('products')
+        .orderBy('createdAt', descending: true)
+        .startAfterDocument(lastDoc)
+        .limit(limit);
+
+    final snap = await query.get();
+    final items = snap.docs.map((d) => Product.fromFirestore(d)).toList();
+    final last = snap.docs.isNotEmpty ? snap.docs.last : null;
+    return PageResult(items: items, lastDoc: last);
+  }
+}
