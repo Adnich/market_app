@@ -34,13 +34,7 @@ class ProductRepository {
     }).toList();
   }
 
-  Stream<List<Product>> getProductsStream() {
-    return _firestore.collection('products').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return Product.fromFirestore(doc);
-      }).toList();
-    });
-  }
+  
 }
 
 class PageResult<T> {
