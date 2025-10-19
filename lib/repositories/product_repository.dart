@@ -8,8 +8,13 @@ class ProductRepository {
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
   Future<String> addProduct(Product product) async {
-    final docRef = await _firestore.collection('products').add(product.toFirestore());
-    await docRef.update({'id': docRef.id});
+    final docRef = _firestore.collection('products').doc(); 
+
+    await docRef.set({
+      ...product.toFirestore(),
+      'id': docRef.id,          
+    });
+
     return docRef.id;
   }
 
@@ -24,14 +29,14 @@ class ProductRepository {
   Future<List<Product>> getProductsOnce() async {
     final snapshot = await _firestore.collection('products').get();
     return snapshot.docs.map((doc) {
-      return Product.fromFirestore(doc); // ✅ sada prima cijeli DocumentSnapshot
+      return Product.fromFirestore(doc); 
     }).toList();
   }
 
   Stream<List<Product>> getProductsStream() {
     return _firestore.collection('products').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
-        return Product.fromFirestore(doc); // ✅ isto ovdje
+        return Product.fromFirestore(doc); 
       }).toList();
     });
   }
