@@ -113,20 +113,23 @@ class AddOrEditProductScreen extends HookWidget {
         debugPrint('FirebaseException [saveProduct]: ${e.code} - ${e.message}');
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(message)));
-      } catch (e, stackTrace) {
-        debugPrint('❌ Greška u saveProduct(): $e');
 
+        rethrow; // ✅ propagira FirebaseException
+      } catch (e, stackTrace) {
+        debugPrint('Greška u saveProduct(): $e');
         debugPrint('Neočekivana greška: $e');
         debugPrintStack(stackTrace: stackTrace);
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Došlo je do neočekivane greške.')),
         );
-      }
 
-      isLoading.value = false;
+        rethrow; // ✅ propagira sve ostale greške
+      } finally {
+        isLoading.value = false; // ✅ sigurno se izvršava uvijek
+      }
     }
 
-    // 🔹 UI
     return Scaffold(
       appBar: AppBar(
         title: Text(productId == null ? 'Dodaj proizvod' : 'Izmijeni proizvod'),
