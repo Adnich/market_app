@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import '../models/product.dart';
+import '../src/features/product/domain/models/product.dart';
 import '../services/product_service.dart';
 
 class ProductListScreen extends HookWidget {

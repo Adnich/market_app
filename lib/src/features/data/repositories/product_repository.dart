@@ -1,18 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/product.dart';
+import 'package:injectable/injectable.dart';
+import '../../product/domain/models/product.dart';
 
+@singleton
 class ProductRepository {
   final FirebaseFirestore _firestore;
 
-  ProductRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  ProductRepository(this._firestore);
 
   Future<String> addProduct(Product product) async {
-    final docRef = _firestore.collection('products').doc(); 
+    final docRef = _firestore.collection('products').doc();
 
     await docRef.set({
       ...product.toFirestore(),
-      'id': docRef.id,          
+      'id': docRef.id,
     });
 
     return docRef.id;
@@ -29,20 +30,19 @@ class ProductRepository {
   Future<List<Product>> getProductsOnce() async {
     final snapshot = await _firestore.collection('products').get();
     return snapshot.docs.map((doc) {
-      return Product.fromFirestore(doc); 
+      return Product.fromFirestore(doc);
     }).toList();
   }
 
   Stream<List<Product>> getProductsStream() {
     return _firestore.collection('products').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
-        return Product.fromFirestore(doc); 
+        return Product.fromFirestore(doc);
       }).toList();
     });
   }
 }
 
-// ⬇️ Pomoćna struktura za rezultat jedne "stranice"
 class PageResult<T> {
   final List<T> items;
   final DocumentSnapshot? lastDoc;
@@ -50,7 +50,6 @@ class PageResult<T> {
 }
 
 extension ProductPaging on ProductRepository {
-  /// Učitaj prvu stranicu proizvoda
   Future<PageResult<Product>> getFirstPage({int limit = 10}) async {
     final query = _firestore
         .collection('products')
@@ -63,7 +62,6 @@ extension ProductPaging on ProductRepository {
     return PageResult(items: items, lastDoc: last);
   }
 
-  /// Učitaj sljedeću stranicu nakon lastDoc
   Future<PageResult<Product>> getNextPage({
     required DocumentSnapshot lastDoc,
     int limit = 10,

@@ -6,8 +6,8 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:market_app/src/dependencies.dart';
-import 'package:market_app/models/product.dart';
-import 'package:market_app/repositories/product_repository.dart';
+import 'package:market_app/src/features/product/domain/models/product.dart';
+import 'package:market_app/src/features/data/repositories/product_repository.dart';
 
 class AddOrEditProductScreen extends HookWidget {
   final String? productId;
@@ -28,7 +28,7 @@ class AddOrEditProductScreen extends HookWidget {
 
     final storage = getIt<FirebaseStorage>();
     final picker = getIt<ImagePicker>();
-    final repository = ProductRepository();
+    final repository = getIt<ProductRepository>();
 
     useEffect(() {
       if (existingData != null) {

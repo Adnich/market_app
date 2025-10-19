@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:market_app/src/dependencies.dart';
 import 'package:market_app/src/app_router/app_routes.dart';
-import 'package:market_app/widgets/products_paged_list.dart'; // ✅ Dodano
+import 'package:market_app/src/features/product/presentation/widgets/products_paged_list.dart'; // ✅ Dodano
 import '/screens/add_product_screen.dart';
 
 class HomeScreen extends StatelessWidget {

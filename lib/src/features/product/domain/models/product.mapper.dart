@@ -42,6 +42,8 @@ class ProductMapper extends ClassMapperBase<Product> {
   static const Field<Product, bool> _f$available = Field(
     'available',
     _$available,
+    opt: true,
+    def: true,
   );
   static Timestamp _$createdAt(Product v) => v.createdAt;
   static const Field<Product, Timestamp> _f$createdAt = Field(

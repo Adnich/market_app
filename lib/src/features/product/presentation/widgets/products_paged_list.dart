@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:market_app/models/product.dart';
-import 'package:market_app/repositories/product_repository.dart';
+import 'package:market_app/src/features/product/domain/models/product.dart';
+import 'package:market_app/src/features/data/repositories/product_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:market_app/src/app_router/app_routes.dart';
+import 'package:market_app/src/dependencies.dart'; // ✅ dodaj ako već nemaš
+import 'package:market_app/src/injection.dart' as di;
 
 // 🔑 Globalni key za pristup refresh funkciji iz drugih fajlova
 final productsPagedListKey = GlobalKey<_ProductsPagedListState>();
@@ -23,15 +25,13 @@ class _ProductsPagedListState extends State<ProductsPagedList> {
   final _pagingController =
       PagingController<DocumentSnapshot?, Product>(firstPageKey: null);
 
-  final _repo = ProductRepository();
-
+  final _repo = di.getIt<ProductRepository>();
   @override
   void initState() {
     super.initState();
     _pagingController.addPageRequestListener(_fetchPage);
   }
 
-  // 🔁 Osvježavanje liste proizvoda
   void refreshProducts() {
     _pagingController.refresh();
   }
