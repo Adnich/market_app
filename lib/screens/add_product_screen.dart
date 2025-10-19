@@ -6,6 +6,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:market_app/src/dependencies.dart';
+import 'package:market_app/models/product.dart';
 
 class AddOrEditProductScreen extends HookWidget {
   final String? productId;
@@ -24,6 +25,11 @@ class AddOrEditProductScreen extends HookWidget {
     final imageUrl = useState<String?>(null);
     final isLoading = useState(false);
 
+    // 🔹 Injektovani servisi
+    final firestore = getIt<FirebaseFirestore>();
+    final storage = getIt<FirebaseStorage>();
+    final picker = getIt<ImagePicker>();
+
     useEffect(() {
       if (existingData != null) {
         nameController.text = existingData!['name'] ?? '';
@@ -35,7 +41,6 @@ class AddOrEditProductScreen extends HookWidget {
     }, []);
 
     Future<void> pickImage() async {
-      final picker = getIt<ImagePicker>();
       final picked = await picker.pickImage(source: ImageSource.gallery);
       if (picked != null) {
         pickedImage.value = File(picked.path);
@@ -44,11 +49,7 @@ class AddOrEditProductScreen extends HookWidget {
 
     Future<String?> uploadImage(String productId) async {
       if (pickedImage.value == null) return imageUrl.value;
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('product_images')
-          .child('$productId.jpg');
-
+      final ref = storage.ref().child('product_images').child('$productId.jpg');
       await ref.putFile(pickedImage.value!);
       return await ref.getDownloadURL();
     }
@@ -57,29 +58,31 @@ class AddOrEditProductScreen extends HookWidget {
       if (!formKey.currentState!.validate()) return;
       isLoading.value = true;
 
-      final data = {
-        'name': nameController.text.trim(),
-        'price': double.tryParse(priceController.text.trim()) ?? 0,
-        'description': descriptionController.text.trim(),
-        'createdAt': Timestamp.now(),
-      };
+      final productData = Product(
+        id: productId ?? '',
+        name: nameController.text.trim(),
+        price: double.tryParse(priceController.text.trim()) ?? 0,
+        description: descriptionController.text.trim(),
+        imageUrl: imageUrl.value,
+        available: true,
+        createdAt: Timestamp.now(),
+      );
 
       try {
-        final firestore = FirebaseFirestore.instance;
-
         if (productId == null) {
-          final docRef = await firestore.collection('products').add(data);
+          final docRef =
+              await firestore.collection('products').add(productData.toFirestore());
           final newImageUrl = await uploadImage(docRef.id);
           await docRef.update({'imageUrl': newImageUrl});
         } else {
           final newImageUrl = await uploadImage(productId!);
-          data['imageUrl'] = newImageUrl ?? imageUrl.value ?? '';
-          await firestore.collection('products').doc(productId!).update(data);
+          await firestore.collection('products').doc(productId!).update({
+            ...productData.toFirestore(),
+            'imageUrl': newImageUrl ?? imageUrl.value ?? '',
+          });
         }
 
-        if (context.mounted) {
-          context.pop();
-        }
+        if (context.mounted) context.pop();
 
       } on FirebaseException catch (e) {
         String message;
@@ -98,7 +101,8 @@ class AddOrEditProductScreen extends HookWidget {
         }
 
         debugPrint('FirebaseException [saveProduct]: ${e.code} - ${e.message}');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
       } catch (e, stackTrace) {
         debugPrint('Neočekivana greška: $e');
         debugPrintStack(stackTrace: stackTrace);
@@ -110,7 +114,7 @@ class AddOrEditProductScreen extends HookWidget {
       isLoading.value = false;
     }
 
-    // 🔹 UI
+    // 🔹 UI (nije mijenjan)
     return Scaffold(
       appBar: AppBar(
         title: Text(productId == null ? 'Dodaj proizvod' : 'Izmijeni proizvod'),
@@ -138,31 +142,40 @@ class AddOrEditProductScreen extends HookWidget {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: nameController,
-                      decoration: const InputDecoration(labelText: 'Naziv proizvoda'),
+                      decoration:
+                          const InputDecoration(labelText: 'Naziv proizvoda'),
                       validator: (value) =>
-                          value == null || value.trim().isEmpty ? 'Unesite naziv' : null,
+                          value == null || value.trim().isEmpty
+                              ? 'Unesite naziv'
+                              : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: priceController,
-                      decoration: const InputDecoration(labelText: 'Cijena (KM)'),
+                      decoration:
+                          const InputDecoration(labelText: 'Cijena (KM)'),
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         final price = double.tryParse(value ?? '');
-                        if (price == null || price <= 0) return 'Unesite validnu cijenu';
+                        if (price == null || price <= 0) {
+                          return 'Unesite validnu cijenu';
+                        }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: descriptionController,
-                      decoration: const InputDecoration(labelText: 'Opis'),
+                      decoration:
+                          const InputDecoration(labelText: 'Opis'),
                       maxLines: 3,
                     ),
                     const SizedBox(height: 32),
                     ElevatedButton(
                       onPressed: saveProduct,
-                      child: Text(productId == null ? 'Dodaj' : 'Spasi izmjene'),
+                      child: Text(productId == null
+                          ? 'Dodaj'
+                          : 'Spasi izmjene'),
                     ),
                   ],
                 ),
