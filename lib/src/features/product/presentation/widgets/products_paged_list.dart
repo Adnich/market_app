@@ -5,14 +5,12 @@ import 'package:market_app/src/features/product/domain/models/product.dart';
 import 'package:market_app/src/features/data/repositories/product_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:market_app/src/app_router/app_routes.dart';
-import 'package:market_app/src/dependencies.dart'; // ✅ dodaj ako već nemaš
-import 'package:market_app/src/injection.dart' as di;
+import 'package:market_app/src/injection.dart' ;
 
-// 🔑 Globalni key za pristup refresh funkciji iz drugih fajlova
 final productsPagedListKey = GlobalKey<_ProductsPagedListState>();
 
 class ProductsPagedList extends StatefulWidget {
-  final bool isGuest; // da sakrije edit kad je gost
+  final bool isGuest;
   const ProductsPagedList({super.key, required this.isGuest});
 
   @override
@@ -25,7 +23,7 @@ class _ProductsPagedListState extends State<ProductsPagedList> {
   final _pagingController =
       PagingController<DocumentSnapshot?, Product>(firstPageKey: null);
 
-  final _repo = di.getIt<ProductRepository>();
+  final _repo = getIt<ProductRepository>();
   @override
   void initState() {
     super.initState();

@@ -18,6 +18,8 @@ import 'package:image_picker/image_picker.dart' as _i183;
 import 'package:injectable/injectable.dart' as _i526;
 import 'package:market_app/src/features/data/repositories/product_repository.dart'
     as _i287;
+import 'package:market_app/src/features/user/data/repositories/user_repository.dart'
+    as _i995;
 import 'package:market_app/src/modules/firebase_module.dart' as _i139;
 import 'package:market_app/src/modules/utility_module.dart' as _i145;
 
@@ -38,6 +40,12 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i974.FirebaseFirestore>(() => firebaseModule.firestore);
     gh.lazySingleton<_i457.FirebaseStorage>(() => firebaseModule.storage);
     gh.lazySingleton<_i183.ImagePicker>(() => utilityModule.imagePicker);
+    gh.singleton<_i995.UserRepository>(
+      () => _i995.UserRepository(
+        gh<_i59.FirebaseAuth>(),
+        gh<_i974.FirebaseFirestore>(),
+      ),
+    );
     gh.singleton<_i287.ProductRepository>(
       () => _i287.ProductRepository(gh<_i974.FirebaseFirestore>()),
     );

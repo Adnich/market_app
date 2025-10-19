@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
-import 'package:market_app/src/dependencies.dart';
+import 'package:market_app/src/injection.dart';
+import 'package:market_app/src/features/user/data/repositories/user_repository.dart';
 
 class EditProfileScreen extends HookWidget {
   const EditProfileScreen({super.key});
@@ -19,13 +19,15 @@ class EditProfileScreen extends HookWidget {
 
     final selectedGender = useState<String?>(null);
     final isLoading = useState(false);
-    final auth = getIt<FirebaseAuth>();
-    final uid = auth.currentUser!.uid;
+
+    final userRepo = getIt<UserRepository>();
+    final uid = userRepo.uid!;
 
     useEffect(() {
       Future<void> loadUserData() async {
         try {
-          final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+          final doc = await userRepo.getUserDoc();
+
           if (doc.exists) {
             final data = doc.data()!;
             firstNameController.text = data['firstName'] ?? '';
@@ -49,7 +51,7 @@ class EditProfileScreen extends HookWidget {
       }
 
       loadUserData();
-      return null; 
+      return null;
     }, []);
 
     Future<void> saveChanges() async {
@@ -57,19 +59,26 @@ class EditProfileScreen extends HookWidget {
       isLoading.value = true;
 
       try {
-        await FirebaseFirestore.instance.collection('users').doc(uid).update({
-          'firstName': firstNameController.text.trim(),
-          'lastName': lastNameController.text.trim(),
-          'phone': phoneController.text.trim(),
-          'dateOfBirth': dateOfBirthController.text.trim(),
-          'gender': selectedGender.value ?? '',
+        await userRepo
+            .getUserDoc()
+            .then((_) async {
+          await userRepo.refreshUser(); 
+          await userRepo.firestore
+              .collection('users')
+              .doc(uid)
+              .update({
+            'firstName': firstNameController.text.trim(),
+            'lastName': lastNameController.text.trim(),
+            'phone': phoneController.text.trim(),
+            'dateOfBirth': dateOfBirthController.text.trim(),
+            'gender': selectedGender.value ?? '',
+          });
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Profil uspješno ažuriran")),
         );
         context.pop();
-
       } on FirebaseException catch (e) {
         String message;
         switch (e.code) {
@@ -85,14 +94,12 @@ class EditProfileScreen extends HookWidget {
 
         debugPrint('FirebaseException [saveChanges]: ${e.code} - ${e.message}');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-
       } catch (e, stackTrace) {
         debugPrint('Neuhvaćena greška [saveChanges]: $e');
         debugPrintStack(stackTrace: stackTrace);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Došlo je do neočekivane greške.')),
         );
-
       } finally {
         isLoading.value = false;
       }

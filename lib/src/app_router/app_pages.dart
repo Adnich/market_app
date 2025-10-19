@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:market_app/src/dependencies.dart'; 
+import 'package:market_app/src/injection.dart';
 
 import 'app_routes.dart';
 import '../features/home/presentation/home_view.dart';

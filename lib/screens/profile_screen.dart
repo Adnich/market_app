@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
-import 'package:market_app/src/dependencies.dart';
+import 'package:market_app/src/injection.dart';
 
 class ProfileScreen extends HookWidget {
   const ProfileScreen({super.key});
@@ -35,11 +35,11 @@ class ProfileScreen extends HookWidget {
     useEffect(() {
       Future<void> loadUserData() async {
         try {
-          debugPrint('📘 Pokušavam učitati korisnika UID: $uid');
+          debugPrint('Pokušavam učitati korisnika UID: $uid');
           final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
           if (!doc.exists) {
-            debugPrint('⚠️ Dokument za UID $uid ne postoji.');
+            debugPrint(' Dokument za UID $uid ne postoji.');
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Nema podataka o korisniku.')),
             );

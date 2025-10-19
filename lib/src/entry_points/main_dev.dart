@@ -4,12 +4,12 @@ import '../../firebase_options_dev.dart' as dev;
 import '../app.dart';
 import '../flavor_config/flavor_config.dart';
 import '../flavor_config/dev_config.dart';
-import '../dependencies.dart';
+import 'package:market_app/src/injection.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await configureDependencies('dev');
+  await configureDependencies;
 
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(

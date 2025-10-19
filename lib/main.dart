@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'src/router/app_router.dart';
-import 'src/dependencies.dart';
-import 'src/injection.dart' as injection; 
+import 'src/injection.dart' ; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,7 +11,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  injection.configureDependencies();
+  configureDependencies();
 
   runApp(const AppEntry());
 }

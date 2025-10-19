@@ -3,7 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:market_app/src/dependencies.dart';
+import 'package:market_app/src/injection.dart';
 
 class RegisterScreen extends HookWidget {
   const RegisterScreen({super.key});

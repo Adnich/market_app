@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
-import 'package:market_app/src/dependencies.dart';
+import 'package:market_app/src/injection.dart';
 import '/screens/login_screen.dart';
 import '/screens/register_screen.dart';
 import '/screens/home_screen.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:market_app/src/dependencies.dart';
+import 'package:market_app/src/injection.dart';
 
 class LoginView extends HookWidget {
   const LoginView({super.key});
