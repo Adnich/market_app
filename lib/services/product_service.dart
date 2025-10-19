@@ -8,8 +8,7 @@ class ProductService {
     final snapshot = await _firestore.collection('products').get();
 
     return snapshot.docs.map((doc) {
-      final data = doc.data();
-      return Product.fromFirestore(data, doc.id);
+      return Product.fromFirestore(doc); 
     }).toList();
   }
 }

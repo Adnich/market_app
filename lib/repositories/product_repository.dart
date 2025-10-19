@@ -24,14 +24,14 @@ class ProductRepository {
   Future<List<Product>> getProductsOnce() async {
     final snapshot = await _firestore.collection('products').get();
     return snapshot.docs.map((doc) {
-      return Product.fromFirestore(doc.data(), doc.id);
+      return Product.fromFirestore(doc); // ✅ sada prima cijeli DocumentSnapshot
     }).toList();
   }
 
   Stream<List<Product>> getProductsStream() {
     return _firestore.collection('products').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
-        return Product.fromFirestore(doc.data(), doc.id);
+        return Product.fromFirestore(doc); // ✅ isto ovdje
       }).toList();
     });
   }

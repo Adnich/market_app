@@ -19,18 +19,19 @@ class Product with ProductMappable {
     required this.price,
     required this.description,
     this.imageUrl,
-    required this.available,
+    this.available = true, 
     required this.createdAt,
   });
 
-  factory Product.fromFirestore(Map<String, dynamic> data, String id) {
+  factory Product.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data()!;
     return Product(
-      id: id,
+      id: doc.id,
       name: data['name'] ?? '',
       price: (data['price'] ?? 0).toDouble(),
       description: data['description'] ?? '',
       imageUrl: data['imageUrl'],
-      available: data['available'] ?? true,
+      available: data['available'] ?? true, 
       createdAt: data['createdAt'] is Timestamp
           ? data['createdAt'] as Timestamp
           : Timestamp.now(),
