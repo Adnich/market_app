@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:market_app/src/injection.dart';
 import '../../services/auth_service.dart';
+import 'package:market_app/src/app_router/app_routes.dart';
 
 class LoginScreen extends HookWidget {
   const LoginScreen({super.key});
@@ -36,6 +37,10 @@ class LoginScreen extends HookWidget {
 
         if (context.mounted) context.go('/home');
       } on FirebaseAuthException catch (e) {
+        debugPrint('FirebaseAuthException: ${e.code} - ${e.message}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Greška: ${e.message ?? "Pokušajte ponovo."}')),
+        );
         String message;
         switch (e.code) {
           case 'invalid-email':
@@ -72,7 +77,8 @@ class LoginScreen extends HookWidget {
         isLoading.value = true;
         final result = await authService.signInWithGoogle();
         if (result != null && context.mounted) {
-          context.go('/home');
+        context.go(AppRoutes.home);
+;
         }
       } catch (e, stackTrace) {
         debugPrint('Greška pri Google prijavi: $e');
