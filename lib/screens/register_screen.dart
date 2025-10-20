@@ -45,7 +45,8 @@ class RegisterScreen extends HookWidget {
         );
 
         final uid = credential.user!.uid;
-        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        final firestore = getIt<FirebaseFirestore>();
+        await firestore.collection('users').doc(uid).set({
           'name': '$name $lastName',
           'email': email,
           'phone': phone,

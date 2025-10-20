@@ -41,6 +41,8 @@ class ProfileScreen extends HookWidget {
       Future<void> loadUserData() async {
         try {
           debugPrint('Pokušavam učitati korisnika UID: $uid');
+
+          await auth.currentUser?.reload();
           final doc = await firestore.collection('users').doc(uid).get();
 
           if (!doc.exists) {
@@ -53,16 +55,28 @@ class ProfileScreen extends HookWidget {
             return;
           }
 
+          final data = doc.data();
+          debugPrint('Učitani podaci iz Firestore-a: $data');
+
+          if (data == null || data.isEmpty) {
+            debugPrint('Dokument postoji, ali nema podataka!');
+            return;
+          }
+
           final appUser = AppUser.fromFirestore(doc);
-          debugPrint('Korisnički dokument učitan: ${appUser.email}');
 
           name.value =
               '${appUser.firstName ?? '-'} ${appUser.lastName ?? ''}'.trim();
-          email.value = appUser.email;
+          email.value = appUser.email ?? '-';
           phone.value = appUser.phone ?? '-';
           dateOfBirth.value = appUser.dateOfBirth ?? '-';
           gender.value = appUser.gender ?? '-';
           imageUrl.value = appUser.photoUrl ?? '';
+
+          debugPrint('Podaci postavljeni u state:');
+          debugPrint('Ime: ${name.value}');
+          debugPrint('Email: ${email.value}');
+          debugPrint('Slika: ${imageUrl.value}');
         } catch (e, stack) {
           debugPrint('Greška [loadUserData]: $e');
           debugPrintStack(stackTrace: stack);
