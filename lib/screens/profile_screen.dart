@@ -7,6 +7,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:market_app/src/injection.dart';
+import 'package:market_app/src/features/user/domain/models/app_user.dart'; // ✅ Dodano
 
 class ProfileScreen extends HookWidget {
   const ProfileScreen({super.key});
@@ -36,25 +37,29 @@ class ProfileScreen extends HookWidget {
       Future<void> loadUserData() async {
         try {
           debugPrint('Pokušavam učitati korisnika UID: $uid');
-          final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .get();
 
           if (!doc.exists) {
-            debugPrint(' Dokument za UID $uid ne postoji.');
+            debugPrint('Dokument za UID $uid ne postoji.');
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Nema podataka o korisniku.')),
             );
             return;
           }
 
-          final data = doc.data();
-          debugPrint('Dokument pronađen: $data');
+          final appUser = AppUser.fromFirestore(doc);
+          debugPrint('Korisnički dokument učitan: ${appUser.email}');
 
-          name.value = data?['firstName'] ?? data?['name'] ?? '-';
-          email.value = data?['email'] ?? '-';
-          phone.value = data?['phone'] ?? '-';
-          dateOfBirth.value = data?['dateOfBirth'] ?? '-';
-          gender.value = data?['gender'] ?? '-';
-          imageUrl.value = data?['photoUrl'] ?? '';
+          name.value =
+              '${appUser.firstName ?? '-'} ${appUser.lastName ?? ''}'.trim();
+          email.value = appUser.email;
+          phone.value = appUser.phone ?? '-';
+          dateOfBirth.value = appUser.dateOfBirth ?? '-';
+          gender.value = appUser.gender ?? '-';
+          imageUrl.value = appUser.photoUrl ?? '';
         } catch (e, stack) {
           debugPrint('Greška [loadUserData]: $e');
           debugPrintStack(stackTrace: stack);
@@ -77,14 +82,17 @@ class ProfileScreen extends HookWidget {
 
       final file = File(picked.path);
       try {
-        await FirebaseStorage.instance.ref('profile_pictures/$uid.jpg').putFile(file);
+        await FirebaseStorage.instance
+            .ref('profile_pictures/$uid.jpg')
+            .putFile(file);
         final downloadUrl = await FirebaseStorage.instance
             .ref('profile_pictures/$uid.jpg')
             .getDownloadURL();
 
-        await FirebaseFirestore.instance.collection('users').doc(uid).update({
-          'photoUrl': downloadUrl,
-        });
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .update({'photoUrl': downloadUrl});
 
         imageUrl.value = downloadUrl;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -117,10 +125,12 @@ class ProfileScreen extends HookWidget {
                     onTap: pickAndUploadImage,
                     child: CircleAvatar(
                       radius: 60,
-                      backgroundImage: imageUrl.value != null && imageUrl.value!.isNotEmpty
+                      backgroundImage: imageUrl.value != null &&
+                              imageUrl.value!.isNotEmpty
                           ? NetworkImage(imageUrl.value!)
                           : null,
-                      child: imageUrl.value == null || imageUrl.value!.isEmpty
+                      child: imageUrl.value == null ||
+                              imageUrl.value!.isEmpty
                           ? const Icon(Icons.person, size: 60)
                           : null,
                     ),
@@ -144,7 +154,9 @@ class ProfileScreen extends HookWidget {
                     onPressed: logout,
                     icon: const Icon(Icons.logout),
                     label: const Text("Odjavi se"),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
                   ),
                 ],
               ),
