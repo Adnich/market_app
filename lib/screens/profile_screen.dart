@@ -7,7 +7,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:market_app/src/injection.dart';
-import 'package:market_app/src/features/user/domain/models/app_user.dart'; // ✅ Dodano
+import 'package:market_app/src/features/user/domain/models/app_user.dart';
 
 class ProfileScreen extends HookWidget {
   const ProfileScreen({super.key});
@@ -15,6 +15,10 @@ class ProfileScreen extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final auth = getIt<FirebaseAuth>();
+    final firestore = getIt<FirebaseFirestore>();
+    final storage = getIt<FirebaseStorage>();
+    final picker = getIt<ImagePicker>();
+
     final user = auth.currentUser;
 
     if (user == null) {
@@ -37,16 +41,15 @@ class ProfileScreen extends HookWidget {
       Future<void> loadUserData() async {
         try {
           debugPrint('Pokušavam učitati korisnika UID: $uid');
-          final doc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(uid)
-              .get();
+          final doc = await firestore.collection('users').doc(uid).get();
 
           if (!doc.exists) {
             debugPrint('Dokument za UID $uid ne postoji.');
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Nema podataka o korisniku.')),
-            );
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Nema podataka o korisniku.')),
+              );
+            }
             return;
           }
 
@@ -63,9 +66,11 @@ class ProfileScreen extends HookWidget {
         } catch (e, stack) {
           debugPrint('Greška [loadUserData]: $e');
           debugPrintStack(stackTrace: stack);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Greška: $e')),
-          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Greška: $e')),
+            );
+          }
         } finally {
           isLoading.value = false;
         }
@@ -76,39 +81,38 @@ class ProfileScreen extends HookWidget {
     }, []);
 
     Future<void> pickAndUploadImage() async {
-      final picker = ImagePicker();
       final picked = await picker.pickImage(source: ImageSource.gallery);
       if (picked == null) return;
 
       final file = File(picked.path);
       try {
-        await FirebaseStorage.instance
-            .ref('profile_pictures/$uid.jpg')
-            .putFile(file);
-        final downloadUrl = await FirebaseStorage.instance
-            .ref('profile_pictures/$uid.jpg')
-            .getDownloadURL();
+        await storage.ref('profile_pictures/$uid.jpg').putFile(file);
+        final downloadUrl =
+            await storage.ref('profile_pictures/$uid.jpg').getDownloadURL();
 
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .update({'photoUrl': downloadUrl});
+        await firestore.collection('users').doc(uid).update({
+          'photoUrl': downloadUrl,
+        });
 
         imageUrl.value = downloadUrl;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Slika profila je uspješno ažurirana')),
-        );
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Slika profila je uspješno ažurirana')),
+          );
+        }
       } catch (e, stack) {
         debugPrint('Greška [pickAndUploadImage]: $e');
         debugPrintStack(stackTrace: stack);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Greška pri slanju slike.')),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Greška pri slanju slike.')),
+          );
+        }
       }
     }
 
     Future<void> logout() async {
-      final auth = getIt<FirebaseAuth>();
       await auth.signOut();
       if (context.mounted) context.go('/login');
     }
@@ -170,8 +174,13 @@ class ProfileScreen extends HookWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(child: Text(value ?? "-", softWrap: true)),
+          Text(
+            "$label: ",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Expanded(
+            child: Text(value ?? "-", softWrap: true),
+          ),
         ],
       ),
     );
