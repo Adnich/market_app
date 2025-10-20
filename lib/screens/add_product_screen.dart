@@ -11,35 +11,33 @@ import 'package:market_app/src/features/data/repositories/product_repository.dar
 
 class AddOrEditProductScreen extends HookWidget {
   final String? productId;
-  final Map<String, dynamic>? existingData;
+  final Product? existingProduct;
 
-  const AddOrEditProductScreen({super.key, this.productId, this.existingData});
+  const AddOrEditProductScreen({super.key, this.productId, this.existingProduct});
 
   @override
   Widget build(BuildContext context) {
     final formKey = useMemoized(() => GlobalKey<FormState>());
-    final nameController = useTextEditingController();
-    final priceController = useTextEditingController();
-    final descriptionController = useTextEditingController();
+
+    final nameController = useTextEditingController(
+      text: existingProduct?.name ?? '',
+    );
+    final priceController = useTextEditingController(
+      text: existingProduct?.price.toString() ?? '',
+    );
+    final descriptionController = useTextEditingController(
+      text: existingProduct?.description ?? '',
+    );
+    final imageUrl = useState<String?>(existingProduct?.imageUrl);
 
     final pickedImage = useState<File?>(null);
-    final imageUrl = useState<String?>(null);
     final isLoading = useState(false);
 
     final storage = getIt<FirebaseStorage>();
     final picker = getIt<ImagePicker>();
     final repository = getIt<ProductRepository>();
 
-    useEffect(() {
-      if (existingData != null) {
-        nameController.text = existingData!['name'] ?? '';
-        priceController.text = existingData!['price']?.toString() ?? '';
-        descriptionController.text = existingData!['description'] ?? '';
-        imageUrl.value = existingData!['imageUrl'];
-      }
-      return null;
-    }, []);
-
+    
     Future<void> pickImage() async {
       final picked = await picker.pickImage(source: ImageSource.gallery);
       if (picked != null) {

@@ -92,10 +92,10 @@ class _ProductsPagedListState extends State<ProductsPagedList> {
                       icon: const Icon(Icons.edit),
                       onPressed: () {
                         context.push(
-                          AppRoutes.addOrEditProduct,
+                          '/add-or-edit-product',
                           extra: {
                             'productId': product.id,
-                            'existingData': product.toFirestore(),
+                            'existingProduct': product,
                           },
                         );
                       },
