@@ -13,7 +13,7 @@ Future<void> main() async {
     options: dev.DefaultFirebaseOptions.currentPlatform,
   );
 
-  await configureDependencies;
+  await configureDependencies();
 
   const FlavorConfig flavor = DevConfig();
   runApp(App(flavor: flavor));

@@ -9,7 +9,7 @@ import 'package:market_app/src/injection.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await configureDependencies;
+  await configureDependencies();
 
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(
