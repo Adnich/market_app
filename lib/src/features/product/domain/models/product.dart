@@ -19,23 +19,23 @@ class Product with ProductMappable {
     required this.price,
     required this.description,
     this.imageUrl,
-    this.available = true, 
+    this.available = true,
     required this.createdAt,
   });
 
   factory Product.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
-    return Product(
-      id: doc.id,
-      name: data['name'] ?? '',
-      price: (data['price'] ?? 0).toDouble(),
-      description: data['description'] ?? '',
-      imageUrl: data['imageUrl'],
-      available: data['available'] ?? true, 
-      createdAt: data['createdAt'] is Timestamp
-          ? data['createdAt'] as Timestamp
+    final data = doc.data();
+    if (data == null) {
+      throw Exception("Firestore dokument ne sadrži podatke za proizvod.");
+    }
+
+    return ProductMapper.fromMap({
+      ...data,
+      'id': doc.id,
+      'createdAt': data['createdAt'] is Timestamp
+          ? data['createdAt']
           : Timestamp.now(),
-    );
+    });
   }
 
   Map<String, dynamic> toFirestore() {
