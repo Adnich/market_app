@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:market_app/src/injection.dart';
+import 'package:market_app/src/features/user/data/repositories/user_repository.dart'; // ✅ Dodano
 
 class RegisterScreen extends HookWidget {
   const RegisterScreen({super.key});
@@ -18,6 +19,8 @@ class RegisterScreen extends HookWidget {
     final dobController = useTextEditingController();
     final selectedGender = useState<String>('muško');
     final isLoading = useState(false);
+
+    final userRepo = getIt<UserRepository>(); // ✅ Dodano
 
     Future<void> register() async {
       final name = nameController.text.trim();
@@ -46,8 +49,11 @@ class RegisterScreen extends HookWidget {
 
         final uid = credential.user!.uid;
         final firestore = getIt<FirebaseFirestore>();
+
+        // ✅ Polja sada odgovaraju AppUser modelu
         await firestore.collection('users').doc(uid).set({
-          'name': '$name $lastName',
+          'firstName': name,
+          'lastName': lastName,
           'email': email,
           'phone': phone,
           'dateOfBirth': dateOfBirth,
@@ -56,14 +62,14 @@ class RegisterScreen extends HookWidget {
           'createdAt': Timestamp.now(),
         });
 
+        // ✅ Učitaj korisnika u memoriju
+        await userRepo.loadUser();
 
         ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registracija uspješna!')),
-      );
+          const SnackBar(content: Text('Registracija uspješna!')),
+        );
 
-      if (context.mounted) context.go('/home'); 
-
-
+        if (context.mounted) context.go('/home');
       } on FirebaseAuthException catch (e) {
         String message;
         switch (e.code) {
@@ -77,10 +83,12 @@ class RegisterScreen extends HookWidget {
             message = 'Lozinka je preslaba. Molimo unesite jaču lozinku.';
             break;
           default:
-            message = 'Došlo je do greške prilikom registracije. Pokušajte ponovo.';
+            message =
+                'Došlo je do greške prilikom registracije. Pokušajte ponovo.';
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
       } catch (e, stackTrace) {
         debugPrint('Neuhvaćena greška u registraciji: $e');
         debugPrintStack(stackTrace: stackTrace);
@@ -125,8 +133,8 @@ class RegisterScreen extends HookWidget {
               ),
               TextField(
                 controller: dobController,
-                decoration:
-                    const InputDecoration(labelText: 'Datum rođenja (YYYY-MM-DD)'),
+                decoration: const InputDecoration(
+                    labelText: 'Datum rođenja (YYYY-MM-DD)'),
                 keyboardType: TextInputType.datetime,
               ),
               DropdownButtonFormField<String>(

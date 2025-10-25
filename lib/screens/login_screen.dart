@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:market_app/src/injection.dart';
 import '../../services/auth_service.dart';
 import 'package:market_app/src/app_router/app_routes.dart';
+import 'package:market_app/src/features/user/data/repositories/user_repository.dart'; // ✅ Dodano
 
 class LoginScreen extends HookWidget {
   const LoginScreen({super.key});
@@ -15,6 +16,8 @@ class LoginScreen extends HookWidget {
     final passwordController = useTextEditingController();
     final authService = useMemoized(() => AuthService());
     final isLoading = useState(false);
+
+    final userRepo = getIt<UserRepository>(); // ✅ Dodano
 
     Future<void> login() async {
       final email = emailController.text.trim();
@@ -35,12 +38,12 @@ class LoginScreen extends HookWidget {
           password: password,
         );
 
-        if (context.mounted) context.go('/home');
+        // ✅ Učitaj korisnika nakon prijave
+        await userRepo.loadUser();
+
+        if (context.mounted) context.go(AppRoutes.home);
       } on FirebaseAuthException catch (e) {
         debugPrint('FirebaseAuthException: ${e.code} - ${e.message}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Greška: ${e.message ?? "Pokušajte ponovo."}')),
-        );
         String message;
         switch (e.code) {
           case 'invalid-email':
@@ -59,11 +62,11 @@ class LoginScreen extends HookWidget {
             message = 'Došlo je do greške prilikom prijave. Pokušajte ponovo.';
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
       } catch (e, stackTrace) {
         debugPrint('Neuhvaćena greška kod login-a: $e');
         debugPrintStack(stackTrace: stackTrace);
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Došlo je do neočekivane greške.')),
         );
@@ -76,17 +79,17 @@ class LoginScreen extends HookWidget {
       try {
         isLoading.value = true;
         final result = await authService.signInWithGoogle();
-        if (result != null && context.mounted) {
-        context.go(AppRoutes.home);
-;
+
+        if (result != null) {
+          // ✅ Učitaj korisnika i odmah preusmjeri
+          await userRepo.loadUser();
+          if (context.mounted) context.go(AppRoutes.home);
         }
       } catch (e, stackTrace) {
         debugPrint('Greška pri Google prijavi: $e');
         debugPrintStack(stackTrace: stackTrace);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       } finally {
         isLoading.value = false;
       }

@@ -41,14 +41,14 @@ class EditProfileScreen extends HookWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Greška pri učitavanju podataka. Pokušajte ponovo.')),
           );
-          rethrow; 
+          rethrow;
         } catch (e, stackTrace) {
           debugPrint('Neuhvaćena greška [loadUserData]: $e');
           debugPrintStack(stackTrace: stackTrace);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Došlo je do neočekivane greške.')),
           );
-          rethrow; 
+          rethrow;
         }
       }
 
@@ -61,21 +61,16 @@ class EditProfileScreen extends HookWidget {
       isLoading.value = true;
 
       try {
-        await userRepo
-            .getUserDoc()
-            .then((_) async {
-          await userRepo.refreshUser();
-          await userRepo.firestore
-              .collection('users')
-              .doc(uid)
-              .update({
-            'firstName': firstNameController.text.trim(),
-            'lastName': lastNameController.text.trim(),
-            'phone': phoneController.text.trim(),
-            'dateOfBirth': dateOfBirthController.text.trim(),
-            'gender': selectedGender.value ?? '',
-          });
+        // Koristi userRepo.firestore umjesto direktnog FirebaseFirestore.instance
+        await userRepo.firestore.collection('users').doc(uid).update({
+          'firstName': firstNameController.text.trim(),
+          'lastName': lastNameController.text.trim(),
+          'phone': phoneController.text.trim(),
+          'dateOfBirth': dateOfBirthController.text.trim(),
+          'gender': selectedGender.value ?? '',
         });
+
+        await userRepo.refreshUser();
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Profil uspješno ažuriran")),
@@ -96,14 +91,14 @@ class EditProfileScreen extends HookWidget {
 
         debugPrint('FirebaseException [saveChanges]: ${e.code} - ${e.message}');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-        rethrow; 
+        rethrow;
       } catch (e, stackTrace) {
         debugPrint('Neuhvaćena greška [saveChanges]: $e');
         debugPrintStack(stackTrace: stackTrace);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Došlo je do neočekivane greške.')),
         );
-        rethrow; 
+        rethrow;
       } finally {
         isLoading.value = false;
       }

@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:market_app/src/injection.dart';
 import 'package:market_app/src/features/user/domain/models/app_user.dart';
+import 'package:market_app/src/features/user/data/repositories/user_repository.dart'; // ✅ Dodano
 
 class ProfileScreen extends HookWidget {
   const ProfileScreen({super.key});
@@ -18,85 +19,21 @@ class ProfileScreen extends HookWidget {
     final firestore = getIt<FirebaseFirestore>();
     final storage = getIt<FirebaseStorage>();
     final picker = getIt<ImagePicker>();
+    final userRepo = getIt<UserRepository>(); // ✅ Dodano
 
-    final user = auth.currentUser;
+    final appUser = useValueListenable(userRepo.currentUser); // ✅ Reactive korisnik
 
-    if (user == null) {
+    if (appUser == null) {
       return const Scaffold(
         body: Center(child: Text("Korisnik nije prijavljen.")),
       );
     }
 
-    final uid = user.uid;
-
-    final name = useState<String?>(null);
-    final email = useState<String?>(null);
-    final phone = useState<String?>(null);
-    final dateOfBirth = useState<String?>(null);
-    final gender = useState<String?>(null);
-    final imageUrl = useState<String?>(null);
-    final isLoading = useState(true);
-
-    useEffect(() {
-      Future<void> loadUserData() async {
-        try {
-          debugPrint('Pokušavam učitati korisnika UID: $uid');
-
-          await auth.currentUser?.reload();
-          final doc = await firestore.collection('users').doc(uid).get();
-
-          if (!doc.exists) {
-            debugPrint('Dokument za UID $uid ne postoji.');
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Nema podataka o korisniku.')),
-              );
-            }
-            return;
-          }
-
-          final data = doc.data();
-          debugPrint('Učitani podaci iz Firestore-a: $data');
-
-          if (data == null || data.isEmpty) {
-            debugPrint('Dokument postoji, ali nema podataka!');
-            return;
-          }
-
-          final appUser = AppUser.fromFirestore(doc);
-
-          name.value =
-              '${appUser.firstName ?? '-'} ${appUser.lastName ?? ''}'.trim();
-          email.value = appUser.email ?? '-';
-          phone.value = appUser.phone ?? '-';
-          dateOfBirth.value = appUser.dateOfBirth ?? '-';
-          gender.value = appUser.gender ?? '-';
-          imageUrl.value = appUser.photoUrl ?? '';
-
-          debugPrint('Podaci postavljeni u state:');
-          debugPrint('Ime: ${name.value}');
-          debugPrint('Email: ${email.value}');
-          debugPrint('Slika: ${imageUrl.value}');
-        } catch (e, stack) {
-          debugPrint('Greška [loadUserData]: $e');
-          debugPrintStack(stackTrace: stack);
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Greška: $e')),
-            );
-          }
-        } finally {
-          isLoading.value = false;
-        }
-      }
-
-      loadUserData();
-      return null;
-    }, []);
+    final uid = auth.currentUser?.uid;
 
     Future<void> pickAndUploadImage() async {
       final picked = await picker.pickImage(source: ImageSource.gallery);
-      if (picked == null) return;
+      if (picked == null || uid == null) return;
 
       final file = File(picked.path);
       try {
@@ -108,7 +45,8 @@ class ProfileScreen extends HookWidget {
           'photoUrl': downloadUrl,
         });
 
-        imageUrl.value = downloadUrl;
+        // ✅ Ažuriraj korisnika u memoriji
+        await userRepo.loadUser();
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -127,58 +65,56 @@ class ProfileScreen extends HookWidget {
     }
 
     Future<void> logout() async {
-      await auth.signOut();
+      await userRepo.signOut(); // ✅ koristi UserRepository
       if (context.mounted) context.go('/login');
     }
 
     return Scaffold(
       appBar: AppBar(title: const Text("Profil")),
-      body: isLoading.value
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: pickAndUploadImage,
-                    child: CircleAvatar(
-                      radius: 60,
-                      backgroundImage: imageUrl.value != null &&
-                              imageUrl.value!.isNotEmpty
-                          ? NetworkImage(imageUrl.value!)
-                          : null,
-                      child: imageUrl.value == null ||
-                              imageUrl.value!.isEmpty
-                          ? const Icon(Icons.person, size: 60)
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  _buildProfileRow("Ime", name.value),
-                  _buildProfileRow("Email", email.value),
-                  _buildProfileRow("Telefon", phone.value),
-                  _buildProfileRow("Datum rođenja", dateOfBirth.value),
-                  _buildProfileRow("Spol", gender.value),
-
-                  const SizedBox(height: 30),
-                  ElevatedButton.icon(
-                    onPressed: () => context.push('/edit-profile'),
-                    icon: const Icon(Icons.edit),
-                    label: const Text("Uredi profil"),
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    onPressed: logout,
-                    icon: const Icon(Icons.logout),
-                    label: const Text("Odjavi se"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                  ),
-                ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            GestureDetector(
+              onTap: pickAndUploadImage,
+              child: CircleAvatar(
+                radius: 60,
+                backgroundImage: appUser.photoUrl != null &&
+                        appUser.photoUrl!.isNotEmpty
+                    ? NetworkImage(appUser.photoUrl!)
+                    : null,
+                child: appUser.photoUrl == null || appUser.photoUrl!.isEmpty
+                    ? const Icon(Icons.person, size: 60)
+                    : null,
               ),
             ),
+            const SizedBox(height: 24),
+
+            _buildProfileRow("Ime",
+                '${appUser.firstName ?? '-'} ${appUser.lastName ?? ''}'),
+            _buildProfileRow("Email", appUser.email ?? '-'),
+            _buildProfileRow("Telefon", appUser.phone ?? '-'),
+            _buildProfileRow("Datum rođenja", appUser.dateOfBirth ?? '-'),
+            _buildProfileRow("Spol", appUser.gender ?? '-'),
+
+            const SizedBox(height: 30),
+            ElevatedButton.icon(
+              onPressed: () => context.push('/edit-profile'),
+              icon: const Icon(Icons.edit),
+              label: const Text("Uredi profil"),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: logout,
+              icon: const Icon(Icons.logout),
+              label: const Text("Odjavi se"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
