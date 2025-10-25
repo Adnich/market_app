@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:market_app/src/injection.dart';
 import '../../services/auth_service.dart';
 import 'package:market_app/src/app_router/app_routes.dart';
-import 'package:market_app/src/features/user/data/repositories/user_repository.dart'; // ✅ Dodano
+import 'package:market_app/src/features/user/data/repositories/user_repository.dart'; // ✅
 
 class LoginScreen extends HookWidget {
   const LoginScreen({super.key});
@@ -17,7 +17,7 @@ class LoginScreen extends HookWidget {
     final authService = useMemoized(() => AuthService());
     final isLoading = useState(false);
 
-    final userRepo = getIt<UserRepository>(); // ✅ Dodano
+    final userRepo = getIt<UserRepository>();
 
     Future<void> login() async {
       final email = emailController.text.trim();
@@ -25,7 +25,7 @@ class LoginScreen extends HookWidget {
 
       if (email.isEmpty || password.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unesite email i lozinku.')),
+          const SnackBar(content: Text('Unesite i email i lozinku.')),
         );
         return;
       }
@@ -33,37 +33,45 @@ class LoginScreen extends HookWidget {
       try {
         isLoading.value = true;
         final auth = getIt<FirebaseAuth>();
+
         await auth.signInWithEmailAndPassword(
           email: email,
           password: password,
         );
 
-        // ✅ Učitaj korisnika nakon prijave
-        await userRepo.loadUser();
+        await userRepo.loadUser(); 
 
         if (context.mounted) context.go(AppRoutes.home);
       } on FirebaseAuthException catch (e) {
         debugPrint('FirebaseAuthException: ${e.code} - ${e.message}');
+
         String message;
         switch (e.code) {
           case 'invalid-email':
-            message = 'Email adresa nije ispravna.';
+            message = 'Unesena email adresa nije ispravna.';
             break;
           case 'user-not-found':
-            message = 'Nalog s ovom email adresom ne postoji.';
+            message = 'Ne postoji korisnik s ovom email adresom.';
             break;
           case 'wrong-password':
-            message = 'Pogrešna lozinka. Pokušajte ponovo.';
+            message = 'Pogrešna lozinka. Molimo pokušajte ponovo.';
             break;
           case 'user-disabled':
-            message = 'Ovaj korisnički nalog je onemogućen.';
+            message = 'Ovaj nalog je onemogućen.';
+            break;
+          case 'too-many-requests':
+            message = 'Previše neuspješnih pokušaja. Pokušajte kasnije.';
+            break;
+          case 'network-request-failed':
+            message = 'Provjerite internet konekciju i pokušajte ponovo.';
             break;
           default:
             message = 'Došlo je do greške prilikom prijave. Pokušajte ponovo.';
         }
 
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
       } catch (e, stackTrace) {
         debugPrint('Neuhvaćena greška kod login-a: $e');
         debugPrintStack(stackTrace: stackTrace);
@@ -81,15 +89,15 @@ class LoginScreen extends HookWidget {
         final result = await authService.signInWithGoogle();
 
         if (result != null) {
-          // ✅ Učitaj korisnika i odmah preusmjeri
           await userRepo.loadUser();
           if (context.mounted) context.go(AppRoutes.home);
         }
       } catch (e, stackTrace) {
         debugPrint('Greška pri Google prijavi: $e');
         debugPrintStack(stackTrace: stackTrace);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Greška prilikom Google prijave.')),
+        );
       } finally {
         isLoading.value = false;
       }
