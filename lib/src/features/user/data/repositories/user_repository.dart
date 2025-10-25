@@ -9,7 +9,6 @@ class UserRepository {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
-  // 🔹 Observable korisnik (možeš ga pratiti u UI-u pomoću ValueListenable)
   final ValueNotifier<AppUser?> currentUser = ValueNotifier(null);
 
   UserRepository(this._auth, this._firestore) {
@@ -20,21 +19,18 @@ class UserRepository {
   bool get isLoggedIn => _auth.currentUser != null;
   String? get uid => _auth.currentUser?.uid;
 
-  /// 🔹 Inicijalno učitavanje korisnika
   Future<void> _init() async {
     if (_auth.currentUser != null) {
       await loadUser();
     }
   }
 
-  /// 🔹 Dohvata dokument korisnika
   Future<DocumentSnapshot<Map<String, dynamic>>> getUserDoc() async {
     final userId = uid;
     if (userId == null) throw Exception('Nema aktivnog korisnika.');
     return _firestore.collection('users').doc(userId).get();
   }
 
-  /// 🔹 Učitava korisnika iz Firestore i sprema u `currentUser`
   Future<void> loadUser() async {
     final userId = uid;
     if (userId == null) {
@@ -50,17 +46,22 @@ class UserRepository {
     }
   }
 
-  /// 🔹 Osvježava korisnika
   Future<void> refreshUser() async {
     await loadUser();
   }
 
-  /// 🔹 Ručno postavljanje korisnika (npr. nakon registracije)
   void setUser(AppUser user) {
     currentUser.value = user;
   }
 
-  /// 🔹 Odjava i čišćenje state-a
+  Future<void> updateUser(Map<String, dynamic> data) async {
+    final userId = uid;
+    if (userId == null) throw Exception('Nema aktivnog korisnika.');
+
+    await _firestore.collection('users').doc(userId).update(data);
+    await loadUser();
+  }
+
   Future<void> signOut() async {
     await _auth.signOut();
     currentUser.value = null;

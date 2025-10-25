@@ -61,14 +61,14 @@ class EditProfileScreen extends HookWidget {
       isLoading.value = true;
 
       try {
-        // Koristi userRepo.firestore umjesto direktnog FirebaseFirestore.instance
-        await userRepo.firestore.collection('users').doc(uid).update({
-          'firstName': firstNameController.text.trim(),
-          'lastName': lastNameController.text.trim(),
-          'phone': phoneController.text.trim(),
-          'dateOfBirth': dateOfBirthController.text.trim(),
-          'gender': selectedGender.value ?? '',
-        });
+        await userRepo.updateUser({
+        'firstName': firstNameController.text.trim(),
+        'lastName': lastNameController.text.trim(),
+        'phone': phoneController.text.trim(),
+        'dateOfBirth': dateOfBirthController.text.trim(),
+        'gender': selectedGender.value ?? '',
+      });
+
 
         await userRepo.refreshUser();
 
