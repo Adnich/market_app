@@ -1,6 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dart_mappable/dart_mappable.dart';
+part 'app_user.mapper.dart'; 
 
-class AppUser {
+
+@MappableClass()
+class AppUser with AppUserMappable {
   final String id;
   final String email;
   final String? firstName;
@@ -10,7 +14,7 @@ class AppUser {
   final String? gender;
   final String? photoUrl;
 
-  AppUser({
+  const AppUser({
     required this.id,
     required this.email,
     this.firstName,
@@ -18,32 +22,20 @@ class AppUser {
     this.phone,
     this.dateOfBirth,
     this.gender,
-    this.photoUrl
+    this.photoUrl,
   });
 
   factory AppUser.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
-    return AppUser(
-      id: doc.id,
-      email: data['email'] ?? '',
-      firstName: data['firstName'],
-      lastName: data['lastName'],
-      phone: data['phone'],
-      dateOfBirth: data['dateOfBirth'],
-      gender: data['gender'],
-      photoUrl: data['photoUrl']
-    );
+    final data = doc.data();
+    if (data == null) {
+      throw Exception('Firestore document is null');
+    }
+
+    return AppUserMapper.fromMap({
+      ...data,
+      'id': doc.id,
+    });
   }
 
-  Map<String, dynamic> toFirestore() {
-    return {
-      'email': email,
-      'firstName': firstName,
-      'lastName': lastName,
-      'phone': phone,
-      'dateOfBirth': dateOfBirth,
-      'gender': gender,
-      'photoUrl':photoUrl,
-    };
-  }
+  Map<String, dynamic> toFirestore() => toMap();
 }
