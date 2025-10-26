@@ -1,17 +1,18 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:market_app/src/injection.dart';
 import 'package:market_app/src/app_router/app_routes.dart';
-import 'package:market_app/src/features/product/presentation/widgets/products_paged_list.dart'; // ✅ Dodano
+import 'package:market_app/src/features/product/presentation/widgets/products_paged_list.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends HookWidget {
   const HomeScreen({super.key});
 
   void _signOut(BuildContext context) async {
     final auth = getIt<FirebaseAuth>();
     await auth.signOut();
-    context.go(AppRoutes.login);
+    if (context.mounted) context.go(AppRoutes.login);
   }
 
   @override
@@ -19,6 +20,8 @@ class HomeScreen extends StatelessWidget {
     final auth = getIt<FirebaseAuth>();
     final user = auth.currentUser;
     final bool isGuest = user == null || user.isAnonymous;
+
+    final refreshCallback = useState<VoidCallback?>(null);
 
     return Scaffold(
       appBar: AppBar(
@@ -28,9 +31,7 @@ class HomeScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.person),
               tooltip: 'Moj profil',
-              onPressed: () {
-                context.push(AppRoutes.profile);
-              },
+              onPressed: () => context.push(AppRoutes.profile),
             ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -39,22 +40,20 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-
-      // ✅ FAB sada nakon dodavanja proizvoda automatski osvježava listu
       floatingActionButton: isGuest
           ? null
           : FloatingActionButton(
               onPressed: () async {
                 await context.push(AppRoutes.addProduct);
-                productsPagedListKey.currentState?.refreshProducts(); // 🔁
+                refreshCallback.value?.call(); 
               },
               child: const Icon(Icons.add),
             ),
-
-      // ✅ Zamijenjen stari StreamBuilder s novim widgetom
       body: ProductsPagedList(
-        key: productsPagedListKey,
         isGuest: isGuest,
+        onRefreshCallback: (refresh) {
+          refreshCallback.value = refresh;
+        },
       ),
     );
   }
