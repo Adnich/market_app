@@ -46,14 +46,13 @@ class ProductsPagedList extends HookWidget {
         }
       } catch (e) {
         pagingController.error = e;
+        rethrow; 
       }
     }
 
-    // ✅ Registracija refresh callbacka za HomeScreen
     useEffect(() {
       pagingController.addPageRequestListener(fetchPage);
 
-      // Ovdje HomeScreen dobije funkciju za refresh
       onRefreshCallback?.call(() {
         pagingController.refresh();
       });
