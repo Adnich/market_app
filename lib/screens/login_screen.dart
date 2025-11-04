@@ -1,105 +1,171 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:market_app/src/injection.dart';
+import '../../services/auth_service.dart';
+import 'package:market_app/src/app_router/app_routes.dart';
+import 'package:market_app/src/features/user/data/repositories/user_repository.dart'; // ✅
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends HookWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
+  Widget build(BuildContext context) {
+    final emailController = useTextEditingController();
+    final passwordController = useTextEditingController();
+    final authService = useMemoized(() => AuthService());
+    final isLoading = useState(false);
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  bool _loading = false;
-  String? _errorMessage;
+    final userRepo = getIt<UserRepository>();
 
-  Future<void> _login() async {
-    setState(() {
-      _loading = true;
-      _errorMessage = null;
-    });
+    Future<void> login() async {
+      final email = emailController.text.trim();
+      final password = passwordController.text.trim();
 
-    try {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text.trim();
-
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      if (context.mounted) {
-        context.go('/home');
+      if (email.isEmpty || password.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unesite i email i lozinku.')),
+        );
+        return;
       }
-    } on FirebaseAuthException catch (e) {
-      setState(() {
-        _errorMessage = e.message;
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
+
+      try {
+        isLoading.value = true;
+        final auth = getIt<FirebaseAuth>();
+
+        await auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+        await userRepo.loadUser(); 
+
+        if (context.mounted) context.go(AppRoutes.home);
+      } on FirebaseAuthException catch (e) {
+        debugPrint('FirebaseAuthException: ${e.code} - ${e.message}');
+
+        String message;
+        switch (e.code) {
+          case 'invalid-email':
+            message = 'Unesena email adresa nije ispravna.';
+            break;
+          case 'user-not-found':
+            message = 'Ne postoji korisnik s ovom email adresom.';
+            break;
+          case 'wrong-password':
+            message = 'Pogrešna lozinka. Molimo pokušajte ponovo.';
+            break;
+          case 'user-disabled':
+            message = 'Ovaj nalog je onemogućen.';
+            break;
+          case 'too-many-requests':
+            message = 'Previše neuspješnih pokušaja. Pokušajte kasnije.';
+            break;
+          case 'network-request-failed':
+            message = 'Provjerite internet konekciju i pokušajte ponovo.';
+            break;
+          default:
+            message = 'Došlo je do greške prilikom prijave. Pokušajte ponovo.';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      } catch (e, stackTrace) {
+        debugPrint('Neuhvaćena greška kod login-a: $e');
+        debugPrintStack(stackTrace: stackTrace);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Došlo je do neočekivane greške.')),
+        );
+      } finally {
+        isLoading.value = false;
       }
     }
-  }
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
+    Future<void> loginWithGoogle() async {
+      try {
+        isLoading.value = true;
+        final result = await authService.signInWithGoogle();
 
-  @override
-  Widget build(BuildContext context) {
+        if (result != null) {
+          await userRepo.loadUser();
+          if (context.mounted) context.go(AppRoutes.home);
+        }
+      } catch (e, stackTrace) {
+        debugPrint('Greška pri Google prijavi: $e');
+        debugPrintStack(stackTrace: stackTrace);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Greška prilikom Google prijave.')),
+        );
+      } finally {
+        isLoading.value = false;
+      }
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Prijava")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              if (_errorMessage != null) ...[
-                Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
-                const SizedBox(height: 10),
-              ],
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: "Email"),
-                validator: (value) =>
-                    value == null || !value.contains('@') ? "Unesite validan email" : null,
+      appBar: AppBar(title: const Text('Prijava')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const SizedBox(height: 32),
+
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
+              keyboardType: TextInputType.emailAddress,
+            ),
+
+            const SizedBox(height: 16),
+
+            TextField(
+              controller: passwordController,
+              decoration: const InputDecoration(labelText: 'Lozinka'),
+              obscureText: true,
+            ),
+
+            const SizedBox(height: 32),
+
+            isLoading.value
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: login,
+                    child: const Text('Prijavi se'),
+                  ),
+
+            const SizedBox(height: 16),
+            const Divider(height: 32),
+            const Text(
+              "ILI",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+
+            ElevatedButton.icon(
+              onPressed: loginWithGoogle,
+              label: const Text('Nastavi s Google nalogom'),
+              icon: const Icon(Icons.login),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                elevation: 3,
+                minimumSize: const Size(double.infinity, 50),
               ),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: "Šifra"),
-                obscureText: true,
-                validator: (value) =>
-                    value == null || value.length < 6 ? "Šifra mora imati bar 6 karaktera" : null,
-              ),
-              const SizedBox(height: 20),
-              _loading
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          _login();
-                        }
-                      },
-                      child: const Text("Prijavi se"),
-                    ),
-              TextButton(
-                onPressed: () {
-                  context.go('/register');
-                },
-                child: const Text("Nemate nalog? Registrujte se"),
-              ),
-            ],
-          ),
+            ),
+
+            const SizedBox(height: 32),
+
+            TextButton(
+              onPressed: () => context.go('/register'),
+              child: const Text('Nemaš račun? Registruj se'),
+            ),
+
+            ElevatedButton(
+              onPressed: () => context.go('/home'),
+              child: const Text('Posjeti bez prijave'),
+            ),
+          ],
         ),
       ),
     );

@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import '../../firebase_options_dev.dart' as dev;
+import '../../firebase_options_prod.dart' as prod;
 import '../app.dart';
-import 'flavor_config/flavor_config.dart';
-import 'flavor_config/dev_config.dart';
+import '../flavor_config/flavor_config.dart';
+import '../flavor_config/prod_config.dart';
+import 'package:market_app/src/injection.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await configureDependencies();
+
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(
-      options: dev.DefaultFirebaseOptions.currentPlatform,
+      options: prod.DefaultFirebaseOptions.currentPlatform,
     );
   }
 
-  const FlavorConfig flavor = DevConfig();
+  const FlavorConfig flavor = ProdConfig();
   runApp(App(flavor: flavor));
 }

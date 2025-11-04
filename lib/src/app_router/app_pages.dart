@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:market_app/src/injection.dart';
 
 import 'app_routes.dart';
 import '../features/home/presentation/home_view.dart';
@@ -9,9 +10,11 @@ import '../features/auth/presentation/login_view.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription _sub;
+
   GoRouterRefreshStream(Stream<dynamic> stream) {
     _sub = stream.asBroadcastStream().listen((_) => notifyListeners());
   }
+
   @override
   void dispose() {
     _sub.cancel();
@@ -20,20 +23,25 @@ class GoRouterRefreshStream extends ChangeNotifier {
 }
 
 GoRouter buildRouter() {
+  final auth = getIt<FirebaseAuth>(); 
+
   return GoRouter(
     initialLocation: AppRoutes.home,
     refreshListenable: GoRouterRefreshStream(
-      FirebaseAuth.instance.authStateChanges(),
+      auth.authStateChanges(), 
     ),
     routes: [
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) {
-          final user = FirebaseAuth.instance.currentUser;
+          final user = auth.currentUser; 
           return user == null ? const LoginView() : const HomeView();
         },
       ),
-      GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginView()),
+      GoRoute(
+        path: AppRoutes.login,
+        builder: (_, __) => const LoginView(),
+      ),
     ],
   );
 }
